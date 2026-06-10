@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bonus
+      POSTGRES_PASSWORD: bonus
+      POSTGRES_DB: bonus_ledger
+    ports:
+      - "5432:5432"
+    volumes:
+      - bonus_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bonus"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_DSN: "postgres://bonus:bonus@postgres:5432/bonus_ledger?sslmode=disable"
+      DEFAULT_TTL_DAYS: "365"
+    ports:
+      - "8080:8080"
+
+volumes:
+  bonus_pg_data:

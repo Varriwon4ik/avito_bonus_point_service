@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonus Points Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#F7F7F5;--surface:#FFFFFF;--surface2:#F2F1EE;
+    --border:#E4E3DE;--border2:#D1CFC8;
+    --text:#1A1A18;--text2:#6B6A65;--text3:#9E9D99;
+    --accent:#1A1A18;--accent-fg:#FFFFFF;
+    --success-bg:#EAF3DE;--success:#3B6D11;
+    --warning-bg:#FAEEDA;--warning:#854F0B;
+    --danger-bg:#FCEBEB;--danger:#A32D2D;
+    --info-bg:#E6F1FB;--info:#185FA5;
+    --radius:8px;--radius-lg:12px;--radius-xl:16px;
+    --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  }
+  body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between}
+  .topbar-logo{font-size:14px;font-weight:600;letter-spacing:-0.01em}
+  .layout{display:flex;max-width:1200px;margin:0 auto}
+  .sidebar{width:200px;padding:20px 12px;display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);cursor:pointer;font-size:13.5px;color:var(--text2);border:none;background:none;width:100%;text-align:left}
+  .nav-item:hover{background:var(--surface2);color:var(--text)}
+  .nav-item.active{background:var(--accent);color:#fff}
+  .main{flex:1;padding:28px 32px;min-width:0}
+  .page{display:none}
+  .page.active{display:block}
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .page-title{font-size:20px;font-weight:600;letter-spacing:-0.02em}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px}
+  .stat-label{font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em}
+  .stat-value{font-size:24px;font-weight:600;letter-spacing:-0.03em;font-variant-numeric:tabular-nums}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:20px}
+  .card-header{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13.5px;font-weight:600}
+  .card-body{padding:18px 20px}
+  table{width:100%;border-collapse:collapse}
+  th{padding:10px 16px;text-align:left;font-size:11.5px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border)}
+  td{padding:11px 16px;font-size:13px;border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+  .td-id{font-family:var(--mono);font-size:12px;color:var(--text2)}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11.5px;font-weight:500}
+  .badge-success{background:var(--success-bg);color:var(--success)}
+  .badge-warning{background:var(--warning-bg);color:var(--warning)}
+  .badge-danger{background:var(--danger-bg);color:var(--danger)}
+  .badge-gray{background:var(--surface2);color:var(--text2)}
+  .pts-pos{color:var(--success);font-weight:500;font-variant-numeric:tabular-nums}
+  .pts-neg{color:var(--danger);font-weight:500;font-variant-numeric:tabular-nums}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font)}
+  .btn:hover{background:var(--surface2)}
+  .btn-primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+  .btn-primary:hover{background:#333330}
+  .btn-sm{padding:5px 10px;font-size:12px}
+  .btn-danger{color:var(--danger);border-color:transparent}
+  .btn-danger:hover{background:var(--danger-bg);border-color:var(--danger)}
+  .input{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface);font-family:var(--font);outline:none}
+  .input:focus{border-color:var(--accent)}
+  .form-row{margin-bottom:14px}
+  .form-label{font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .balance-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;margin-bottom:24px;display:flex;gap:32px;align-items:center;flex-wrap:wrap}
+  .balance-pts{font-size:32px;font-weight:700;letter-spacing:-0.04em}
+  .balance-label{font-size:12px;color:var(--text3);margin-top:2px}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:12px 18px;border-radius:var(--radius-lg);font-size:13px;z-index:300;opacity:0;transform:translateY(8px);transition:all 0.2s;pointer-events:none;max-width:400px}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .toast.error{background:var(--danger)}
+  .meta-block{background:var(--surface2);border-radius:var(--radius);padding:12px;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--text2);white-space:pre-wrap;word-break:break-word}
+  @media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">Bonus Points Service</div>
+  <div style="font-size:12px;color:var(--text3)">REST ledger with holds, expiry &amp; idempotency</div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <button class="nav-item active" onclick="nav('dashboard')" id="nav-dashboard">Dashboard</button>
+    <button class="nav-item" onclick="nav('accrue')" id="nav-accrue">Accrue Points</button>
+    <button class="nav-item" onclick="nav('holds')" id="nav-holds">Holds &amp; Debit</button>
+    <button class="nav-item" onclick="nav('lots')" id="nav-lots">Lots &amp; Expiry</button>
+    <button class="nav-item" onclick="nav('ledger')" id="nav-ledger">Transactions</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header"><div class="page-title">Dashboard</div></div>
+      <div class="card">
+        <div class="card-body">
+          <div class="form-row" style="max-width:320px">
+            <div class="form-label">User ID</div>
+            <input class="input" id="user-id" value="user_123" style="width:100%" oninput="onUserChanged()">
+          </div>
+          <div class="form-row" style="max-width:160px">
+            <div class="form-label">Expiring within (days)</div>
+            <input class="input" id="expiring-days" type="number" value="7" style="width:100%" oninput="loadBalance()">
+          </div>
+          <button class="btn btn-primary" onclick="loadBalance()">Refresh balance</button>
+        </div>
+      </div>
+
+      <div class="balance-hero">
+        <div>
+          <div class="balance-pts" id="d-available">-</div>
+          <div class="balance-label">Available</div>
+        </div>
+        <div>
+          <div class="balance-pts" id="d-held" style="color:var(--warning)">-</div>
+          <div class="balance-label">Held</div>
+        </div>
+        <div>
+          <div class="balance-pts" id="d-total">-</div>
+          <div class="balance-label">Total</div>
+        </div>
+        <div>
+          <div class="balance-pts" id="d-expiring" style="color:var(--danger)">-</div>
+          <div class="balance-label">Expiring soon</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accrue -->
+    <div class="page" id="page-accrue">
+      <div class="page-header"><div class="page-title">Accrue Points</div></div>
+      <div class="card">
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="form-label">User ID</div>
+              <input class="input" id="ac-user" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Amount</div>
+              <input class="input" id="ac-amount" type="number" placeholder="e.g. 500" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Lifetime in days (optional, default from server config)</div>
+              <input class="input" id="ac-ttl" type="number" placeholder="e.g. 365" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Idempotency key <span style="color:var(--text3);font-weight:400">(prevents duplicate accruals)</span></div>
+              <input class="input" id="ac-idem" placeholder="e.g. order_12345" style="width:100%">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="submitAccrue()">Accrue points</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Last response</div>
+        <div class="card-body"><pre class="meta-block" id="ac-result">-</pre></div>
+      </div>
+    </div>
+
+    <!-- Holds & Debit -->
+    <div class="page" id="page-holds">
+      <div class="page-header"><div class="page-title">Holds &amp; Debit</div></div>
+
+      <div class="form-grid">
+        <div class="card">
+          <div class="card-header">Two-phase: create hold</div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-label">User ID</div>
+              <input class="input" id="hold-user" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Amount</div>
+              <input class="input" id="hold-amount" type="number" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Idempotency key</div>
+              <input class="input" id="hold-idem" style="width:100%">
+            </div>
+            <button class="btn btn-primary" onclick="submitHold()">Create hold</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Confirm / cancel hold</div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-label">Hold ID</div>
+              <input class="input" id="hold-id" type="number" style="width:100%">
+            </div>
+            <button class="btn btn-primary" style="margin-right:8px" onclick="confirmHold()">Confirm</button>
+            <button class="btn btn-danger" onclick="cancelHold()">Cancel (release)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">One-shot debit (hold + confirm)</div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="form-label">User ID</div>
+              <input class="input" id="debit-user" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Amount</div>
+              <input class="input" id="debit-amount" type="number" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Idempotency key</div>
+              <input class="input" id="debit-idem" style="width:100%">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="submitDebit()">Debit points</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Last response</div>
+        <div class="card-body"><pre class="meta-block" id="hold-result">-</pre></div>
+      </div>
+    </div>
+
+    <!-- Lots -->
+    <div class="page" id="page-lots">
+      <div class="page-header">
+        <div class="page-title">Lots &amp; Expiry</div>
+        <button class="btn" onclick="loadLots()">Refresh</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Lot ID</th><th>Accrued</th><th>Remaining</th><th>Expires</th><th>Created</th></tr></thead>
+          <tbody id="lots-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ledger -->
+    <div class="page" id="page-ledger">
+      <div class="page-header">
+        <div class="page-title">Transactions</div>
+        <button class="btn" onclick="loadLedger()">Refresh</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Created</th></tr></thead>
+          <tbody id="ledger-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function currentUser() {
+  return document.getElementById('user-id').value.trim() || 'user_123';
+}
+
+function nav(page) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  if (page === 'dashboard') loadBalance();
+  if (page === 'lots') loadLots();
+  if (page === 'ledger') loadLedger();
+}
+
+function onUserChanged() {
+  var u = currentUser();
+  ['ac-user', 'hold-user', 'debit-user'].forEach(function(id) {
+    document.getElementById(id).value = u;
+  });
+  loadBalance();
+}
+
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function api(path, opts) {
+  return fetch(path, opts).then(function(res) {
+    return res.text().then(function(text) {
+      var body = null;
+      try { body = text ? JSON.parse(text) : null; } catch (e) {}
+      if (!res.ok) {
+        var msg = (body && body.error) ? body.error : ('HTTP ' + res.status);
+        throw new Error(msg);
+      }
+      return body;
+    });
+  });
+}
+
+function loadBalance() {
+  var u = currentUser();
+  var days = document.getElementById('expiring-days').value || 7;
+  var url = '/v1/users/' + encodeURIComponent(u) + '/balance?expiring_within_days=' + encodeURIComponent(days);
+  api(url).then(function(b) {
+    document.getElementById('d-available').textContent = b.available.toLocaleString();
+    document.getElementById('d-held').textContent = b.held.toLocaleString();
+    document.getElementById('d-total').textContent = b.total.toLocaleString();
+    document.getElementById('d-expiring').textContent = b.expiring_soon.toLocaleString();
+  }).catch(function(e) {
+    showToast('Failed to load balance: ' + e.message, true);
+  });
+}
+
+function submitAccrue() {
+  var u = document.getElementById('ac-user').value.trim() || currentUser();
+  var amount = parseInt(document.getElementById('ac-amount').value, 10);
+  var ttl = document.getElementById('ac-ttl').value;
+  var idem = document.getElementById('ac-idem').value.trim();
+  if (!amount || amount <= 0) { showToast('Enter a positive amount', true); return; }
+  var payload = { amount: amount, idempotency_key: idem };
+  if (ttl) payload.ttl_days = parseInt(ttl, 10);
+  api('/v1/users/' + encodeURIComponent(u) + '/accruals', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(function(res) {
+    document.getElementById('ac-result').textContent = JSON.stringify(res, null, 2);
+    showToast('Accrued ' + res.amount + ' points to ' + res.user_id);
+    if (u === currentUser()) loadBalance();
+  }).catch(function(e) {
+    document.getElementById('ac-result').textContent = 'Error: ' + e.message;
+    showToast(e.message, true);
+  });
+}
+
+function submitHold() {
+  var u = document.getElementById('hold-user').value.trim() || currentUser();
+  var amount = parseInt(document.getElementById('hold-amount').value, 10);
+  var idem = document.getElementById('hold-idem').value.trim();
+  if (!amount || amount <= 0) { showToast('Enter a positive amount', true); return; }
+  api('/v1/users/' + encodeURIComponent(u) + '/holds', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({amount: amount, idempotency_key: idem})
+  }).then(function(res) {
+    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
+    document.getElementById('hold-id').value = res.hold_id;
+    showToast('Hold #' + res.hold_id + ' created (' + res.amount + ' pts)');
+    if (u === currentUser()) loadBalance();
+  }).catch(function(e) {
+    document.getElementById('hold-result').textContent = 'Error: ' + e.message;
+    showToast(e.message, true);
+  });
+}
+
+function confirmHold() {
+  var id = parseInt(document.getElementById('hold-id').value, 10);
+  if (!id) { showToast('Enter a hold id', true); return; }
+  api('/v1/holds/' + id + '/confirm', {method: 'POST'}).then(function(res) {
+    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
+    showToast('Hold #' + id + ' confirmed');
+    loadBalance();
+  }).catch(function(e) {
+    document.getElementById('hold-result').textContent = 'Error: ' + e.message;
+    showToast(e.message, true);
+  });
+}
+
+function cancelHold() {
+  var id = parseInt(document.getElementById('hold-id').value, 10);
+  if (!id) { showToast('Enter a hold id', true); return; }
+  api('/v1/holds/' + id + '/cancel', {method: 'POST'}).then(function(res) {
+    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
+    showToast('Hold #' + id + ' cancelled, points released');
+    loadBalance();
+  }).catch(function(e) {
+    document.getElementById('hold-result').textContent = 'Error: ' + e.message;
+    showToast(e.message, true);
+  });
+}
+
+function submitDebit() {
+  var u = document.getElementById('debit-user').value.trim() || currentUser();
+  var amount = parseInt(document.getElementById('debit-amount').value, 10);
+  var idem = document.getElementById('debit-idem').value.trim();
+  if (!amount || amount <= 0) { showToast('Enter a positive amount', true); return; }
+  api('/v1/users/' + encodeURIComponent(u) + '/debits', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({amount: amount, idempotency_key: idem})
+  }).then(function(res) {
+    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
+    showToast('Debited ' + res.amount + ' points from ' + res.user_id);
+    if (u === currentUser()) loadBalance();
+  }).catch(function(e) {
+    document.getElementById('hold-result').textContent = 'Error: ' + e.message;
+    showToast(e.message, true);
+  });
+}
+
+function loadLots() {
+  var u = currentUser();
+  api('/v1/users/' + encodeURIComponent(u) + '/lots').then(function(lots) {
+    var now = new Date();
+    var html = lots.map(function(l) {
+      var exp = new Date(l.expires_at);
+      var expired = exp < now;
+      var cls = expired ? 'badge-gray' : (l.remaining === 0 ? 'badge-gray' : 'badge-success');
+      var label = expired ? 'expired' : (l.remaining === 0 ? 'depleted' : 'active');
+      return '<tr>' +
+        '<td class="td-id">#' + l.lot_id + '</td>' +
+        '<td class="pts-pos">+' + l.amount + '</td>' +
+        '<td>' + l.remaining + ' <span class="badge ' + cls + '">' + label + '</span></td>' +
+        '<td>' + exp.toLocaleString() + '</td>' +
+        '<td style="color:var(--text2)">' + new Date(l.created_at).toLocaleString() + '</td>' +
+        '</tr>';
+    }).join('');
+    document.getElementById('lots-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No lots yet</td></tr>';
+  }).catch(function(e) {
+    showToast('Failed to load lots: ' + e.message, true);
+  });
+}
+
+function loadLedger() {
+  var u = currentUser();
+  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(entries) {
+    var html = entries.map(function(e) {
+      var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
+      var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
+      return '<tr>' +
+        '<td class="td-id">#' + e.id + '</td>' +
+        '<td>' + e.type + '</td>' +
+        '<td class="' + cls + '">' + (e.amount > 0 ? '+' : '') + e.amount + '</td>' +
+        '<td style="color:var(--text2)">' + ref + '</td>' +
+        '<td style="color:var(--text2)">' + new Date(e.created_at).toLocaleString() + '</td>' +
+        '</tr>';
+    }).join('');
+    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
+  }).catch(function(e) {
+    showToast('Failed to load transactions: ' + e.message, true);
+  });
+}
+
+onUserChanged();
+</script>
+</body>
+</html>
