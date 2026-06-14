@@ -8,8 +8,8 @@ MVP v0 is a runnable technical foundation for the bonus points ledger service. I
 
 - Runnable artifact: [docker-compose.yml](../../docker-compose.yml)
 - Container build definition: [Dockerfile](../../Dockerfile)
-- Default local access URL after startup: `http://localhost:8080`
-- Health endpoint: `http://localhost:8080/healthz`
+- Default local access URL after startup: `http://10.93.26.175:8080/`
+- Health endpoint: `http://10.93.26.175:8080/healthz`
 
 ## Customer feedback context
 
