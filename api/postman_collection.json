@@ -1,0 +1,383 @@
+{
+  "info": {
+    "name": "Bonus Points Ledger Service",
+    "_postman_id": "9bc1c327-7b53-4e2a-a2c8-1ee5f4b5c110",
+    "description": "Week 2 API collection for the Bonus Points Ledger Service. Includes representative success and error responses for the current MVP v0 and the planned paginated transactions contract.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "userId",
+      "value": "user_123"
+    },
+    {
+      "key": "holdId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/healthz",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "healthz"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"status\": \"ok\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Accrue Points",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 500,\n  \"ttl_days\": 180,\n  \"idempotency_key\": \"order_12345\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/accruals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "accruals"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "201 Created",
+          "status": "Created",
+          "code": 201,
+          "body": "{\n  \"lot_id\": 1,\n  \"user_id\": \"user_123\",\n  \"amount\": 500,\n  \"expires_at\": \"2026-12-11T10:00:00Z\"\n}"
+        },
+        {
+          "name": "400 Bad Request",
+          "status": "Bad Request",
+          "code": 400,
+          "body": "{\n  \"error\": \"amount must be a positive integer\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Balance",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/balance?expiring_within_days=7",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "balance"
+          ],
+          "query": [
+            {
+              "key": "expiring_within_days",
+              "value": "7"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"user_id\": \"user_123\",\n  \"available\": 1200,\n  \"held\": 300,\n  \"total\": 1500,\n  \"expiring_soon\": 80\n}"
+        },
+        {
+          "name": "400 Bad Request",
+          "status": "Bad Request",
+          "code": 400,
+          "body": "{\n  \"error\": \"expiring_within_days must be a non-negative integer\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Create Hold",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 200,\n  \"idempotency_key\": \"checkout_98765\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/holds",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "holds"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "201 Created",
+          "status": "Created",
+          "code": 201,
+          "body": "{\n  \"hold_id\": 42,\n  \"user_id\": \"user_123\",\n  \"amount\": 200,\n  \"status\": \"active\"\n}"
+        },
+        {
+          "name": "409 Conflict",
+          "status": "Conflict",
+          "code": 409,
+          "body": "{\n  \"error\": \"insufficient available points\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Confirm Hold",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/holds/{{holdId}}/confirm",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "holds",
+            "{{holdId}}",
+            "confirm"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"hold_id\": 42,\n  \"user_id\": \"user_123\",\n  \"amount\": 200,\n  \"status\": \"confirmed\"\n}"
+        },
+        {
+          "name": "404 Not Found",
+          "status": "Not Found",
+          "code": 404,
+          "body": "{\n  \"error\": \"resource not found\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Cancel Hold",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/holds/{{holdId}}/cancel",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "holds",
+            "{{holdId}}",
+            "cancel"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"hold_id\": 42,\n  \"user_id\": \"user_123\",\n  \"amount\": 200,\n  \"status\": \"cancelled\"\n}"
+        },
+        {
+          "name": "409 Conflict",
+          "status": "Conflict",
+          "code": 409,
+          "body": "{\n  \"error\": \"hold is not in 'active' status\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "One-shot Debit",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 100,\n  \"idempotency_key\": \"redeem_1\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/debits",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "debits"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"hold_id\": 43,\n  \"user_id\": \"user_123\",\n  \"amount\": 100,\n  \"status\": \"confirmed\"\n}"
+        },
+        {
+          "name": "409 Conflict",
+          "status": "Conflict",
+          "code": 409,
+          "body": "{\n  \"error\": \"insufficient available points\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "List Lots",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/lots",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "lots"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "[\n  {\n    \"lot_id\": 1,\n    \"amount\": 500,\n    \"remaining\": 300,\n    \"expires_at\": \"2026-12-11T10:00:00Z\",\n    \"created_at\": \"2026-06-14T10:00:00Z\"\n  }\n]"
+        }
+      ]
+    },
+    {
+      "name": "List Transactions (Current MVP v0)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/transactions?limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "transactions"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "[\n  {\n    \"id\": 10,\n    \"user_id\": \"user_123\",\n    \"type\": \"accrual\",\n    \"amount\": 500,\n    \"ref_type\": \"lot\",\n    \"ref_id\": 1,\n    \"created_at\": \"2026-06-14T10:00:00Z\"\n  }\n]"
+        }
+      ]
+    },
+    {
+      "name": "List Transactions (Planned MVP v1 Pagination)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/transactions?page=1&offset=20",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "users",
+            "{{userId}}",
+            "transactions"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "offset",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Planned Week 2 prototype request. This contract is documented for MVP v1 even though MVP v0 still exposes a limit-based transaction list."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "status": "OK",
+          "code": 200,
+          "body": "[\n  {\n    \"id\": 10,\n    \"user_id\": \"user_123\",\n    \"type\": \"accrual\",\n    \"amount\": 500,\n    \"ref_type\": \"lot\",\n    \"ref_id\": 1,\n    \"created_at\": \"2026-06-14T10:00:00Z\"\n  }\n]"
+        },
+        {
+          "name": "400 Bad Request",
+          "status": "Bad Request",
+          "code": 400,
+          "body": "{\n  \"error\": \"invalid pagination parameters\"\n}"
+        }
+      ]
+    }
+  ]
+}

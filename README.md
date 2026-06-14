@@ -48,6 +48,12 @@ export DEFAULT_TTL_DAYS=365   # optional, default lifetime of accrued points
 go run ./cmd/api
 ```
 
+Sanitized example environment values are available in [`.env.example`](./.env.example).
+
+## Week 2 Submission
+
+The public Week 2 assignment index is available at [reports/week2/README.md](./reports/week2/README.md), and the MVP v0 write-up is available directly at [reports/week2/mvp-v0-report.md](./reports/week2/mvp-v0-report.md).
+
 ## API
 
 All endpoints are unauthenticated (internal network only, per spec).

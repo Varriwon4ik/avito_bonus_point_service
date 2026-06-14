@@ -1,0 +1,511 @@
+openapi: 3.0.3
+info:
+  title: Bonus Points Ledger Service API
+  version: 0.1.0
+  description: |
+    Proposed Week 2 API contract for the bonus points ledger service.
+    The current MVP v0 already implements accruals, balances, holds, hold confirmation,
+    hold cancellation, one-shot debits, lots inspection, transaction history listing,
+    and a health endpoint. The documented page-based transaction pagination is the planned
+    MVP v1 contract requested during customer review.
+servers:
+  - url: http://localhost:8080
+    description: Local Docker or local-run instance
+tags:
+  - name: Health
+  - name: Accruals
+  - name: Balances
+  - name: Holds
+  - name: Debits
+  - name: Lots
+  - name: Transactions
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+  /v1/users/{id}/accruals:
+    post:
+      tags: [Accruals]
+      summary: Accrue bonus points for a user
+      description: |
+        Supports manual admin accrual and service-side accrual after purchase confirmation.
+        Implemented in MVP v0.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccrualRequest'
+      responses:
+        '201':
+          description: Points accrued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccrualResult'
+        '400':
+          description: Invalid request body, amount, or TTL value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate idempotency key currently in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/users/{id}/balance:
+    get:
+      tags: [Balances]
+      summary: Get current balance information
+      description: Implemented in MVP v0.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: expiring_within_days
+          schema:
+            type: integer
+            minimum: 0
+            default: 7
+          description: Number of days for the expiring-soon calculation
+      responses:
+        '200':
+          description: Balance returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResult'
+        '400':
+          description: Invalid `expiring_within_days` value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/users/{id}/lots:
+    get:
+      tags: [Lots]
+      summary: List the user's points lots
+      description: |
+        Implemented in MVP v0. Future pagination and status filtering are still planned
+        to better support audit workflows.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Lots returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LotInfo'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/users/{id}/transactions:
+    get:
+      tags: [Transactions]
+      summary: List the user's transaction history
+      description: |
+        MVP v0 currently implements `limit`. The proposed MVP v1 contract adds page-based
+        pagination because the customer requested bounded transaction browsing during Week 2 review.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+          description: Planned MVP v1 page number
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 1
+            example: 20
+          description: Planned MVP v1 page size
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            example: 100
+          description: Current MVP v0 implementation parameter
+      responses:
+        '200':
+          description: Transaction history returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerEntry'
+        '400':
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/users/{id}/holds:
+    post:
+      tags: [Holds]
+      summary: Create a hold for the user's points
+      description: Implemented in MVP v0.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmountRequest'
+      responses:
+        '201':
+          description: Hold created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResult'
+        '400':
+          description: Invalid request body or amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Insufficient available points or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/holds/{hold_id}/confirm:
+    post:
+      tags: [Holds]
+      summary: Confirm an existing hold
+      description: Implemented in MVP v0.
+      parameters:
+        - $ref: '#/components/parameters/HoldId'
+      responses:
+        '200':
+          description: Hold confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResult'
+        '400':
+          description: Invalid hold ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Hold not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Hold is not in an active status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/holds/{hold_id}/cancel:
+    post:
+      tags: [Holds]
+      summary: Cancel an existing hold
+      description: |
+        Implemented in MVP v0. Automatic timeout cancellation remains a planned
+        service behavior for a future iteration.
+      parameters:
+        - $ref: '#/components/parameters/HoldId'
+      responses:
+        '200':
+          description: Hold cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResult'
+        '400':
+          description: Invalid hold ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Hold not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Hold is not in an active status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/users/{id}/debits:
+    post:
+      tags: [Debits]
+      summary: Perform a one-shot debit
+      description: Implemented in MVP v0 as hold plus confirm in one transaction.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmountRequest'
+      responses:
+        '200':
+          description: Debit completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebitResult'
+        '400':
+          description: Invalid request body or amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Insufficient available points or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  parameters:
+    UserId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+      description: User identifier
+    HoldId:
+      in: path
+      name: hold_id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Hold identifier
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    AccrualRequest:
+      type: object
+      required: [amount, idempotency_key]
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          example: 500
+        ttl_days:
+          type: integer
+          minimum: 1
+          example: 180
+        idempotency_key:
+          type: string
+          example: order_12345
+    AmountRequest:
+      type: object
+      required: [amount, idempotency_key]
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          example: 200
+        idempotency_key:
+          type: string
+          example: checkout_98765
+    AccrualResult:
+      type: object
+      required: [lot_id, user_id, amount, expires_at]
+      properties:
+        lot_id:
+          type: integer
+          example: 1
+        user_id:
+          type: string
+          example: user_123
+        amount:
+          type: integer
+          example: 500
+        expires_at:
+          type: string
+          format: date-time
+    BalanceResult:
+      type: object
+      required: [user_id, available, held, total, expiring_soon]
+      properties:
+        user_id:
+          type: string
+          example: user_123
+        available:
+          type: integer
+          example: 1200
+        held:
+          type: integer
+          example: 300
+        total:
+          type: integer
+          example: 1500
+        expiring_soon:
+          type: integer
+          example: 80
+    HoldResult:
+      type: object
+      required: [hold_id, user_id, amount, status]
+      properties:
+        hold_id:
+          type: integer
+          example: 42
+        user_id:
+          type: string
+          example: user_123
+        amount:
+          type: integer
+          example: 200
+        status:
+          type: string
+          enum: [active, confirmed, cancelled]
+          example: active
+    DebitResult:
+      type: object
+      required: [hold_id, user_id, amount, status]
+      properties:
+        hold_id:
+          type: integer
+          example: 43
+        user_id:
+          type: string
+          example: user_123
+        amount:
+          type: integer
+          example: 100
+        status:
+          type: string
+          enum: [confirmed]
+          example: confirmed
+    LotInfo:
+      type: object
+      required: [lot_id, amount, remaining, expires_at, created_at]
+      properties:
+        lot_id:
+          type: integer
+          example: 1
+        amount:
+          type: integer
+          example: 500
+        remaining:
+          type: integer
+          example: 300
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    LedgerEntry:
+      type: object
+      required: [id, user_id, type, amount, created_at]
+      properties:
+        id:
+          type: integer
+          example: 10
+        user_id:
+          type: string
+          example: user_123
+        type:
+          type: string
+          example: accrual
+        amount:
+          type: integer
+          example: 500
+        ref_type:
+          type: string
+          nullable: true
+          example: lot
+        ref_id:
+          type: integer
+          nullable: true
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: amount must be a positive integer
