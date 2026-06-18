@@ -37,8 +37,11 @@ docker compose up --build
 ```
 
 This starts Postgres and the API on `http://localhost:8080`. The same
-address serves a small web UI (dashboard / accrue / holds & debit / lots /
-transactions).
+address serves:
+
+- the web UI at `http://localhost:8080/`
+- Swagger UI at `http://localhost:8080/docs`
+- the OpenAPI spec at `http://localhost:8080/openapi.yaml`
 
 To run locally without Docker:
 
@@ -58,19 +61,40 @@ The public Week 2 assignment index is available at [reports/week2/README.md](./r
 
 All endpoints are unauthenticated (internal network only, per spec).
 
-### Accrue points
+### Important HTTP status codes
+
+- `200 OK` for successful reads, updates, confirms, cancels, and one-shot debits
+- `201 Created` only when a new accrual or hold is created
+- `400 Bad Request` for malformed JSON, missing required fields, invalid amounts, invalid hold IDs, or invalid query parameters
+- `404 Not Found` for unknown users on read/debit/hold operations and unknown hold IDs
+- `409 Conflict` for insufficient funds, invalid hold state, or duplicate in-progress idempotency keys
+- `500 Internal Server Error` for unexpected server-side failures
+
+Error responses use a consistent JSON envelope:
+
+```json
+{
+  "error": "bad_request",
+  "message": "amount must be a positive integer"
+}
 ```
+
+### Accrue points
+```http
 POST /v1/users/{id}/accruals
+Content-Type: application/json
+
 {
   "amount": 500,
   "ttl_days": 180,            // optional, defaults to DEFAULT_TTL_DAYS
   "idempotency_key": "order_12345"
 }
 -> 201 { "lot_id": 1, "user_id": "user_123", "amount": 500, "expires_at": "..." }
+-> 400 { "error": "bad_request", "message": "idempotency_key is required" }
 ```
 
 ### Get balance
-```
+```http
 GET /v1/users/{id}/balance?expiring_within_days=7
 -> 200 {
   "user_id": "user_123",
@@ -79,43 +103,52 @@ GET /v1/users/{id}/balance?expiring_within_days=7
   "total": 1500,       // available + held
   "expiring_soon": 80  // available points expiring within `expiring_within_days`
 }
+-> 404 { "error": "not_found", "message": "user not found" }
 ```
 
 ### Create a hold (phase 1 of two-phase debit)
-```
+```http
 POST /v1/users/{id}/holds
+Content-Type: application/json
+
 { "amount": 200, "idempotency_key": "checkout_98765" }
 -> 201 { "hold_id": 42, "user_id": "user_123", "amount": 200, "status": "active" }
--> 409 if available balance < amount
+-> 404 { "error": "not_found", "message": "user not found" }
+-> 409 { "error": "conflict", "message": "insufficient available points" }
 ```
 
 ### Confirm / cancel a hold (phase 2)
-```
+```http
 POST /v1/holds/{hold_id}/confirm  -> 200 { ..., "status": "confirmed" }
 POST /v1/holds/{hold_id}/cancel   -> 200 { ..., "status": "cancelled" }   // points returned
+POST /v1/holds/{hold_id}/confirm  -> 404 { "error": "not_found", "message": "hold not found" }
 ```
 Both are idempotent: calling confirm/cancel again on an already
 confirmed/cancelled hold returns the same result without side effects.
 
 ### One-shot debit (hold + confirm in a single call)
-```
+```http
 POST /v1/users/{id}/debits
+Content-Type: application/json
+
 { "amount": 100, "idempotency_key": "loyalty_redeem_1" }
 -> 200 { "hold_id": 43, "user_id": "user_123", "amount": 100, "status": "confirmed" }
--> 409 if available balance < amount
+-> 404 { "error": "not_found", "message": "user not found" }
+-> 409 { "error": "conflict", "message": "insufficient available points" }
 ```
 
 ### Lots and ledger (for the UI / debugging)
-```
-GET /v1/users/{id}/lots          -> [ { lot_id, amount, remaining, expires_at, created_at }, ... ]
-GET /v1/users/{id}/transactions  -> [ { id, type, amount, ref_type, ref_id, created_at }, ... ]
+```http
+GET /v1/users/{id}/lots
+GET /v1/users/{id}/transactions?limit=100
 ```
 
 ## Tests
 
 Integration tests run against a real Postgres instance and cover
-idempotency, hold/confirm/cancel, insufficient funds, FIFO-by-expiry
-ordering and concurrent holds (race-safety):
+idempotency, hold/confirm/cancel, malformed JSON, missing required fields,
+not-found handling, invalid amounts, invalid pagination, FIFO-by-expiry
+ordering, concurrent holds (race-safety), and OpenAPI route availability:
 
 ```sh
 docker compose up -d postgres

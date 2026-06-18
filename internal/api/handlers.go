@@ -1,9 +1,9 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func (s *Server) routes() {
@@ -19,14 +19,13 @@ func (s *Server) routes() {
 }
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 type accrueRequest struct {
-	Amount         int    `json:"amount"`
-	TTLDays        *int   `json:"ttl_days,omitempty"`
-	IdempotencyKey string `json:"idempotency_key"`
+	Amount         *int    `json:"amount"`
+	TTLDays        *int    `json:"ttl_days,omitempty"`
+	IdempotencyKey *string `json:"idempotency_key"`
 }
 
 // handleAccrue implements "по каждому пользователю можно добавить бонусные
@@ -37,24 +36,32 @@ func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
 
 	var req accrueRequest
 	if err := readJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		badRequest(w, err.Error())
 		return
 	}
-	if req.Amount <= 0 {
-		writeError(w, http.StatusBadRequest, "amount must be a positive integer")
+	if req.Amount == nil {
+		badRequest(w, "amount is required")
+		return
+	}
+	if req.IdempotencyKey == nil || strings.TrimSpace(*req.IdempotencyKey) == "" {
+		badRequest(w, "idempotency_key is required")
+		return
+	}
+	if *req.Amount <= 0 {
+		badRequest(w, "amount must be a positive integer")
 		return
 	}
 
 	ttl := s.DefaultTTLDays
 	if req.TTLDays != nil {
 		if *req.TTLDays <= 0 {
-			writeError(w, http.StatusBadRequest, "ttl_days must be a positive integer")
+			badRequest(w, "ttl_days must be a positive integer")
 			return
 		}
 		ttl = *req.TTLDays
 	}
 
-	status, body, err := s.Store.Accrue(r.Context(), userID, req.Amount, ttl, req.IdempotencyKey)
+	status, body, err := s.Store.Accrue(r.Context(), userID, *req.Amount, ttl, strings.TrimSpace(*req.IdempotencyKey))
 	s.respond(w, status, body, err)
 }
 
@@ -67,7 +74,7 @@ func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("expiring_within_days"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
-			writeError(w, http.StatusBadRequest, "expiring_within_days must be a non-negative integer")
+			badRequest(w, "expiring_within_days must be a non-negative integer")
 			return
 		}
 		days = n
@@ -78,8 +85,7 @@ func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, 0, nil, err)
 		return
 	}
-	body, _ := json.Marshal(res)
-	s.respond(w, http.StatusOK, body, nil)
+	writeJSON(w, http.StatusOK, res)
 }
 
 func (s *Server) handleListLots(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +95,7 @@ func (s *Server) handleListLots(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, 0, nil, err)
 		return
 	}
-	body, _ := json.Marshal(lots)
-	s.respond(w, http.StatusOK, body, nil)
+	writeJSON(w, http.StatusOK, lots)
 }
 
 func (s *Server) handleListLedger(w http.ResponseWriter, r *http.Request) {
@@ -99,8 +104,8 @@ func (s *Server) handleListLedger(w http.ResponseWriter, r *http.Request) {
 	limit := 100
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, err := strconv.Atoi(v)
-		if err != nil || n <= 0 {
-			writeError(w, http.StatusBadRequest, "limit must be a positive integer")
+		if err != nil || n <= 0 || n > 500 {
+			badRequest(w, "limit must be between 1 and 500")
 			return
 		}
 		limit = n
@@ -111,13 +116,12 @@ func (s *Server) handleListLedger(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, 0, nil, err)
 		return
 	}
-	body, _ := json.Marshal(entries)
-	s.respond(w, http.StatusOK, body, nil)
+	writeJSON(w, http.StatusOK, entries)
 }
 
 type amountRequest struct {
-	Amount         int    `json:"amount"`
-	IdempotencyKey string `json:"idempotency_key"`
+	Amount         *int    `json:"amount"`
+	IdempotencyKey *string `json:"idempotency_key"`
 }
 
 // handleCreateHold implements the first phase of "двухфазное списание":
@@ -127,15 +131,23 @@ func (s *Server) handleCreateHold(w http.ResponseWriter, r *http.Request) {
 
 	var req amountRequest
 	if err := readJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		badRequest(w, err.Error())
 		return
 	}
-	if req.Amount <= 0 {
-		writeError(w, http.StatusBadRequest, "amount must be a positive integer")
+	if req.Amount == nil {
+		badRequest(w, "amount is required")
+		return
+	}
+	if req.IdempotencyKey == nil || strings.TrimSpace(*req.IdempotencyKey) == "" {
+		badRequest(w, "idempotency_key is required")
+		return
+	}
+	if *req.Amount <= 0 {
+		badRequest(w, "amount must be a positive integer")
 		return
 	}
 
-	status, body, err := s.Store.CreateHold(r.Context(), userID, req.Amount, req.IdempotencyKey)
+	status, body, err := s.Store.CreateHold(r.Context(), userID, *req.Amount, strings.TrimSpace(*req.IdempotencyKey))
 	s.respond(w, status, body, err)
 }
 
@@ -146,22 +158,30 @@ func (s *Server) handleDebit(w http.ResponseWriter, r *http.Request) {
 
 	var req amountRequest
 	if err := readJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		badRequest(w, err.Error())
 		return
 	}
-	if req.Amount <= 0 {
-		writeError(w, http.StatusBadRequest, "amount must be a positive integer")
+	if req.Amount == nil {
+		badRequest(w, "amount is required")
+		return
+	}
+	if req.IdempotencyKey == nil || strings.TrimSpace(*req.IdempotencyKey) == "" {
+		badRequest(w, "idempotency_key is required")
+		return
+	}
+	if *req.Amount <= 0 {
+		badRequest(w, "amount must be a positive integer")
 		return
 	}
 
-	status, body, err := s.Store.Debit(r.Context(), userID, req.Amount, req.IdempotencyKey)
+	status, body, err := s.Store.Debit(r.Context(), userID, *req.Amount, strings.TrimSpace(*req.IdempotencyKey))
 	s.respond(w, status, body, err)
 }
 
 func (s *Server) parseHoldID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid hold id")
+		badRequest(w, "invalid hold id")
 		return 0, false
 	}
 	return id, true

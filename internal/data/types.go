@@ -8,7 +8,8 @@ import (
 var (
 	ErrInvalidAmount       = errors.New("amount must be a positive integer")
 	ErrInsufficientFunds   = errors.New("insufficient available points")
-	ErrNotFound            = errors.New("resource not found")
+	ErrUserNotFound        = errors.New("user not found")
+	ErrHoldNotFound        = errors.New("hold not found")
 	ErrInvalidHoldStatus   = errors.New("hold is not in 'active' status")
 	ErrIdempotencyConflict = errors.New("a request with this idempotency key is already in progress")
 )

@@ -45,6 +45,14 @@ func (s *Store) Accrue(ctx context.Context, userID string, amount, ttlDays int, 
 func (s *Store) Balance(ctx context.Context, userID string, expiringWithinDays int) (BalanceResult, error) {
 	res := BalanceResult{UserID: userID}
 
+	exists, err := userExists(ctx, s.DB, userID)
+	if err != nil {
+		return res, err
+	}
+	if !exists {
+		return res, ErrUserNotFound
+	}
+
 	if err := s.DB.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(remaining), 0) FROM points_lots
 		WHERE user_id = $1 AND expires_at > now()`, userID).Scan(&res.Available); err != nil {
@@ -71,6 +79,14 @@ func (s *Store) Balance(ctx context.Context, userID string, expiringWithinDays i
 // ListLots returns every lot for a user (including expired/depleted ones)
 // ordered by expiry date, oldest first.
 func (s *Store) ListLots(ctx context.Context, userID string) ([]LotInfo, error) {
+	exists, err := userExists(ctx, s.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrUserNotFound
+	}
+
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT id, amount, remaining, expires_at, created_at FROM points_lots
 		WHERE user_id = $1
@@ -96,6 +112,15 @@ func (s *Store) ListLedger(ctx context.Context, userID string, limit int) ([]Led
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
+
+	exists, err := userExists(ctx, s.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrUserNotFound
+	}
+
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT id, user_id, type, amount, ref_type, ref_id, created_at FROM ledger_entries
 		WHERE user_id = $1

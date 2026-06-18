@@ -7,5 +7,6 @@ RUN CGO_ENABLED=0 go build -o /bonus-ledger ./cmd/api
 
 FROM alpine:3.19
 COPY --from=build /bonus-ledger /bonus-ledger
+COPY api /api
 EXPOSE 8080
 ENTRYPOINT ["/bonus-ledger"]
