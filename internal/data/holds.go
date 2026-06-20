@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 )
 
 // CreateHold reserves `amount` points for the user, consuming the
@@ -107,39 +108,48 @@ func (s *Store) ConfirmHold(ctx context.Context, holdID int64) (int, []byte, err
 // were taken from (so they remain subject to their original expiry date).
 // Calling Cancel again on an already-cancelled hold is a no-op.
 func (s *Store) CancelHold(ctx context.Context, holdID int64) (int, []byte, error) {
-	tx, err := s.DB.BeginTx(ctx, nil)
+	userID, amount, status, err := s.cancelHold(ctx, holdID, "")
 	if err != nil {
 		return 0, nil, err
 	}
+	body, _ := json.Marshal(HoldResult{HoldID: holdID, UserID: userID, Amount: amount, Status: status})
+	return 200, body, nil
+}
+
+// cancelHold is the core release logic shared by CancelHold (manual release,
+// no note) and ExpireStaleHolds (automatic timeout release, annotated for the
+// audit trail).
+func (s *Store) cancelHold(ctx context.Context, holdID int64, note string) (userID string, amount int, status string, err error) {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return "", 0, "", err
+	}
 	defer tx.Rollback()
 
-	var userID, status string
-	var amount int
 	err = tx.QueryRowContext(ctx, `
 		SELECT user_id, amount, status FROM holds WHERE id = $1 FOR UPDATE`, holdID).
 		Scan(&userID, &amount, &status)
 	if err == sql.ErrNoRows {
-		return 0, nil, ErrHoldNotFound
+		return "", 0, "", ErrHoldNotFound
 	}
 	if err != nil {
-		return 0, nil, err
+		return "", 0, "", err
 	}
 
 	if status == "cancelled" {
 		if err := tx.Commit(); err != nil {
-			return 0, nil, err
+			return "", 0, "", err
 		}
-		body, _ := json.Marshal(HoldResult{HoldID: holdID, UserID: userID, Amount: amount, Status: status})
-		return 200, body, nil
+		return userID, amount, status, nil
 	}
 	if status != "active" {
-		return 0, nil, ErrInvalidHoldStatus
+		return "", 0, "", ErrInvalidHoldStatus
 	}
 
 	rows, err := tx.QueryContext(ctx, `
 		SELECT lot_id, amount FROM hold_allocations WHERE hold_id = $1`, holdID)
 	if err != nil {
-		return 0, nil, err
+		return "", 0, "", err
 	}
 	type alloc struct {
 		lotID  int64
@@ -150,37 +160,85 @@ func (s *Store) CancelHold(ctx context.Context, holdID int64) (int, []byte, erro
 		var a alloc
 		if err := rows.Scan(&a.lotID, &a.amount); err != nil {
 			rows.Close()
-			return 0, nil, err
+			return "", 0, "", err
 		}
 		allocs = append(allocs, a)
 	}
 	if err := rows.Err(); err != nil {
-		return 0, nil, err
+		return "", 0, "", err
 	}
 	rows.Close()
 
 	for _, a := range allocs {
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE points_lots SET remaining = remaining + $1 WHERE id = $2`, a.amount, a.lotID); err != nil {
-			return 0, nil, err
+			return "", 0, "", err
 		}
 	}
 
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE holds SET status = 'cancelled', updated_at = now() WHERE id = $1`, holdID); err != nil {
-		return 0, nil, err
+		return "", 0, "", err
+	}
+
+	var noteArg any
+	if note != "" {
+		noteArg = note
 	}
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id)
-		VALUES ($1, 'cancel', $2, 'hold', $3)`, userID, amount, holdID); err != nil {
-		return 0, nil, err
+		INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id, note)
+		VALUES ($1, 'cancel', $2, 'hold', $3, $4)`, userID, amount, holdID, noteArg); err != nil {
+		return "", 0, "", err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return 0, nil, err
+		return "", 0, "", err
 	}
-	body, _ := json.Marshal(HoldResult{HoldID: holdID, UserID: userID, Amount: amount, Status: "cancelled"})
-	return 200, body, nil
+	return userID, amount, "cancelled", nil
+}
+
+// ExpireStaleHolds releases every active hold whose created_at is older than
+// timeoutHours, restoring its points to the lots they were taken from and
+// recording an annotated ledger entry. It exists so that a calling service
+// that crashes or never invokes confirm/cancel can't permanently lock a
+// user's points; it is meant to be invoked periodically by a background
+// sweep. It returns the number of holds it released.
+func (s *Store) ExpireStaleHolds(ctx context.Context, timeoutHours int) (int, error) {
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT id FROM holds
+		WHERE status = 'active' AND created_at <= now() - make_interval(hours => $1)
+		ORDER BY id`, timeoutHours)
+	if err != nil {
+		return 0, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	rows.Close()
+
+	released := 0
+	for _, id := range ids {
+		_, _, _, err := s.cancelHold(ctx, id, "auto-released: timeout")
+		if err != nil {
+			// the hold may have been confirmed/cancelled concurrently between
+			// the select above and the row lock below; that's not a failure.
+			if errors.Is(err, ErrHoldNotFound) || errors.Is(err, ErrInvalidHoldStatus) {
+				continue
+			}
+			return released, err
+		}
+		released++
+	}
+	return released, nil
 }
 
 // Debit is a convenience one-shot debit: it performs a hold and an

@@ -48,6 +48,7 @@ To run locally without Docker:
 ```sh
 export DB_DSN="postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable"
 export DEFAULT_TTL_DAYS=365   # optional, default lifetime of accrued points
+export HOLD_TIMEOUT_HOURS=24  # optional, holds unresolved for longer than this are auto-released
 go run ./cmd/api
 ```
 

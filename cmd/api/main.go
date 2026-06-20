@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"flag"
@@ -20,10 +21,14 @@ import (
 //go:embed web
 var webFS embed.FS
 
+// holdSweepInterval is how often the background job checks for stale holds.
+const holdSweepInterval = 5 * time.Minute
+
 type config struct {
-	port           int
-	dsn            string
-	defaultTTLDays int
+	port             int
+	dsn              string
+	defaultTTLDays   int
+	holdTimeoutHours int
 }
 
 func main() {
@@ -38,6 +43,14 @@ func main() {
 		}
 	}
 	flag.IntVar(&cfg.defaultTTLDays, "default-ttl-days", defaultTTL, "default lifetime of accrued points, in days")
+	holdTimeoutHours := 24
+	if v := os.Getenv("HOLD_TIMEOUT_HOURS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			holdTimeoutHours = n
+		}
+	}
+	flag.IntVar(&cfg.holdTimeoutHours, "hold-timeout-hours", holdTimeoutHours,
+		"holds left active/unresolved for longer than this are automatically released")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -63,6 +76,8 @@ func main() {
 	store := data.NewStore(db)
 	apiServer := api.NewServer(store, logger, cfg.defaultTTLDays)
 
+	go runHoldSweep(context.Background(), store, cfg.holdTimeoutHours, logger)
+
 	webRoot, err := fs.Sub(webFS, "web")
 	if err != nil {
 		logger.Error("failed to load embedded web assets", "err", err)
@@ -83,7 +98,8 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	logger.Info("starting server", "port", cfg.port, "default_ttl_days", cfg.defaultTTLDays)
+	logger.Info("starting server", "port", cfg.port, "default_ttl_days", cfg.defaultTTLDays,
+		"hold_timeout_hours", cfg.holdTimeoutHours)
 	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server error", "err", err)
@@ -108,4 +124,26 @@ func loadOpenAPISpec() ([]byte, error) {
 	}
 
 	return nil, os.ErrNotExist
+}
+
+// runHoldSweep periodically releases active holds that have been left
+// unresolved (never confirmed or cancelled) for longer than timeoutHours, so
+// a crashed or buggy calling service can't permanently lock a user's points.
+func runHoldSweep(ctx context.Context, store *data.Store, timeoutHours int, logger *slog.Logger) {
+	ticker := time.NewTicker(holdSweepInterval)
+	defer ticker.Stop()
+
+	for {
+		if n, err := store.ExpireStaleHolds(ctx, timeoutHours); err != nil {
+			logger.Error("hold timeout sweep failed", "err", err)
+		} else if n > 0 {
+			logger.Info("auto-released stale holds", "count", n, "hold_timeout_hours", timeoutHours)
+		}
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return
+		}
+	}
 }
