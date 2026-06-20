@@ -122,7 +122,7 @@ func (s *Store) ListLedger(ctx context.Context, userID string, limit int) ([]Led
 	}
 
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, user_id, type, amount, ref_type, ref_id, created_at FROM ledger_entries
+		SELECT id, user_id, type, amount, ref_type, ref_id, note, created_at FROM ledger_entries
 		WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC
 		LIMIT $2`, userID, limit)
@@ -134,7 +134,7 @@ func (s *Store) ListLedger(ctx context.Context, userID string, limit int) ([]Led
 	entries := []LedgerEntry{}
 	for rows.Next() {
 		var e LedgerEntry
-		if err := rows.Scan(&e.ID, &e.UserID, &e.Type, &e.Amount, &e.RefType, &e.RefID, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.UserID, &e.Type, &e.Amount, &e.RefType, &e.RefID, &e.Note, &e.CreatedAt); err != nil {
 			return nil, err
 		}
 		entries = append(entries, e)
