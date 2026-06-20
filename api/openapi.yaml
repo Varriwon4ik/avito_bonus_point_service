@@ -32,6 +32,28 @@ paths:
                 $ref: '#/components/schemas/HealthResponse'
               example:
                 status: ok
+  /metrics:
+    get:
+      tags: [Observability]
+      summary: Prometheus metrics
+      description: |
+        Exposes request counters/latencies and ledger-level gauges in the
+        Prometheus text exposition format. Unauthenticated, intended for an
+        internal scraper. Implemented in US-10.
+      responses:
+        '200':
+          description: Metrics in Prometheus text exposition format
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                # TYPE http_requests_total counter
+                http_requests_total{method="GET",path="/v1/users/{id}/balance",status="200"} 5
+                # TYPE http_request_duration_seconds histogram
+                http_request_duration_seconds_count{method="GET",path="/v1/users/{id}/balance"} 5
+                # TYPE bonus_points_available gauge
+                bonus_points_available 1200
   /v1/users/{id}/accruals:
     post:
       tags: [Accruals]

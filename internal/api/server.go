@@ -17,6 +17,7 @@ type Server struct {
 	Logger         *slog.Logger
 	DefaultTTLDays int
 	Mux            *http.ServeMux
+	Metrics        *Metrics
 }
 
 func NewServer(store *data.Store, logger *slog.Logger, defaultTTLDays int) *Server {
@@ -25,6 +26,7 @@ func NewServer(store *data.Store, logger *slog.Logger, defaultTTLDays int) *Serv
 		Logger:         logger,
 		DefaultTTLDays: defaultTTLDays,
 		Mux:            http.NewServeMux(),
+		Metrics:        NewMetrics(),
 	}
 	s.routes()
 	return s
