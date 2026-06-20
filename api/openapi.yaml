@@ -269,8 +269,10 @@ paths:
       tags: [Holds]
       summary: Cancel an existing hold
       description: |
-        Implemented in MVP v0. Automatic timeout cancellation remains a planned
-        service behavior for a future iteration.
+        Implemented in MVP v0. Holds are also auto-released the same way by a
+        background sweep if they are left active/unresolved for longer than
+        the HOLD_TIMEOUT_HOURS setting; those auto-released holds carry a
+        "auto-released: timeout" note on their ledger entry.
       parameters:
         - $ref: '#/components/parameters/HoldId'
       responses:
@@ -515,6 +517,10 @@ components:
           type: integer
           nullable: true
           example: 1
+        note:
+          type: string
+          nullable: true
+          example: 'auto-released: timeout'
         created_at:
           type: string
           format: date-time
