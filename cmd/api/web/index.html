@@ -78,7 +78,10 @@
 
 <div class="topbar">
   <div class="topbar-logo">Bonus Points Service</div>
-  <div style="font-size:12px;color:var(--text3)">REST ledger with holds, expiry &amp; idempotency</div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <a href="/docs" style="font-size:12px;color:var(--text2);text-decoration:none">OpenAPI Docs</a>
+    <div style="font-size:12px;color:var(--text3)">REST ledger with holds, expiry &amp; idempotency</div>
+  </div>
 </div>
 
 <div class="layout">
@@ -295,7 +298,7 @@ function api(path, opts) {
       var body = null;
       try { body = text ? JSON.parse(text) : null; } catch (e) {}
       if (!res.ok) {
-        var msg = (body && body.error) ? body.error : ('HTTP ' + res.status);
+        var msg = (body && (body.message || body.error)) ? (body.message || body.error) : ('HTTP ' + res.status);
         throw new Error(msg);
       }
       return body;

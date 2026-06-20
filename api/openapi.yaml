@@ -3,11 +3,10 @@ info:
   title: Bonus Points Ledger Service API
   version: 0.1.0
   description: |
-    Proposed Week 2 API contract for the bonus points ledger service.
-    The current MVP v0 already implements accruals, balances, holds, hold confirmation,
+    HTTP API contract for the bonus points ledger service.
+    The service implements accruals, balances, holds, hold confirmation,
     hold cancellation, one-shot debits, lots inspection, transaction history listing,
-    and a health endpoint. The documented page-based transaction pagination is the planned
-    MVP v1 contract requested during customer review.
+    a health endpoint, and OpenAPI access from the running service.
 servers:
   - url: http://localhost:8080
     description: Local Docker or local-run instance
@@ -56,7 +55,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccrualResult'
         '400':
-          description: Invalid request body, amount, or TTL value
+          description: Malformed JSON, missing required fields, invalid amount, or invalid TTL value
           content:
             application/json:
               schema:
@@ -100,6 +99,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
@@ -110,9 +115,7 @@ paths:
     get:
       tags: [Lots]
       summary: List the user's points lots
-      description: |
-        Implemented in MVP v0. Future pagination and status filtering are still planned
-        to better support audit workflows.
+      description: Implemented in MVP v0.
       parameters:
         - $ref: '#/components/parameters/UserId'
       responses:
@@ -124,6 +127,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LotInfo'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
@@ -134,33 +143,18 @@ paths:
     get:
       tags: [Transactions]
       summary: List the user's transaction history
-      description: |
-        MVP v0 currently implements `limit`. The proposed MVP v1 contract adds page-based
-        pagination because the customer requested bounded transaction browsing during Week 2 review.
+      description: Lists the user's most recent ledger entries using the `limit` query parameter.
       parameters:
         - $ref: '#/components/parameters/UserId'
-        - in: query
-          name: page
-          schema:
-            type: integer
-            minimum: 1
-            example: 1
-          description: Planned MVP v1 page number
-        - in: query
-          name: offset
-          schema:
-            type: integer
-            minimum: 1
-            example: 20
-          description: Planned MVP v1 page size
         - in: query
           name: limit
           schema:
             type: integer
             minimum: 1
             maximum: 500
+            default: 100
             example: 100
-          description: Current MVP v0 implementation parameter
+          description: Maximum number of entries to return
       responses:
         '200':
           description: Transaction history returned successfully
@@ -171,7 +165,13 @@ paths:
                 items:
                   $ref: '#/components/schemas/LedgerEntry'
         '400':
-          description: Invalid pagination parameters
+          description: Invalid `limit` value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -203,7 +203,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/HoldResult'
         '400':
-          description: Invalid request body or amount
+          description: Malformed JSON, missing required fields, or invalid amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -319,7 +325,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/DebitResult'
         '400':
-          description: Invalid request body or amount
+          description: Malformed JSON, missing required fields, or invalid amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -364,6 +376,7 @@ components:
     AccrualRequest:
       type: object
       required: [amount, idempotency_key]
+      additionalProperties: false
       properties:
         amount:
           type: integer
@@ -375,10 +388,12 @@ components:
           example: 180
         idempotency_key:
           type: string
+          minLength: 1
           example: order_12345
     AmountRequest:
       type: object
       required: [amount, idempotency_key]
+      additionalProperties: false
       properties:
         amount:
           type: integer
@@ -386,6 +401,7 @@ components:
           example: 200
         idempotency_key:
           type: string
+          minLength: 1
           example: checkout_98765
     AccrualResult:
       type: object
@@ -504,8 +520,11 @@ components:
           format: date-time
     ErrorResponse:
       type: object
-      required: [error]
+      required: [error, message]
       properties:
         error:
+          type: string
+          example: bad_request
+        message:
           type: string
           example: amount must be a positive integer

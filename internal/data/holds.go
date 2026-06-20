@@ -15,6 +15,13 @@ func (s *Store) CreateHold(ctx context.Context, userID string, amount int, idemp
 		if amount <= 0 {
 			return 0, nil, ErrInvalidAmount
 		}
+		exists, err := userExists(ctx, tx, userID)
+		if err != nil {
+			return 0, nil, err
+		}
+		if !exists {
+			return 0, nil, ErrUserNotFound
+		}
 
 		allocs, err := allocateLots(ctx, tx, userID, amount)
 		if err != nil {
@@ -62,7 +69,7 @@ func (s *Store) ConfirmHold(ctx context.Context, holdID int64) (int, []byte, err
 		SELECT user_id, amount, status FROM holds WHERE id = $1 FOR UPDATE`, holdID).
 		Scan(&userID, &amount, &status)
 	if err == sql.ErrNoRows {
-		return 0, nil, ErrNotFound
+		return 0, nil, ErrHoldNotFound
 	}
 	if err != nil {
 		return 0, nil, err
@@ -112,7 +119,7 @@ func (s *Store) CancelHold(ctx context.Context, holdID int64) (int, []byte, erro
 		SELECT user_id, amount, status FROM holds WHERE id = $1 FOR UPDATE`, holdID).
 		Scan(&userID, &amount, &status)
 	if err == sql.ErrNoRows {
-		return 0, nil, ErrNotFound
+		return 0, nil, ErrHoldNotFound
 	}
 	if err != nil {
 		return 0, nil, err
@@ -183,6 +190,13 @@ func (s *Store) Debit(ctx context.Context, userID string, amount int, idempotenc
 	return s.withIdempotency(ctx, idempotencyKey, "debit", func(tx *sql.Tx) (int, any, error) {
 		if amount <= 0 {
 			return 0, nil, ErrInvalidAmount
+		}
+		exists, err := userExists(ctx, tx, userID)
+		if err != nil {
+			return 0, nil, err
+		}
+		if !exists {
+			return 0, nil, ErrUserNotFound
 		}
 
 		allocs, err := allocateLots(ctx, tx, userID, amount)

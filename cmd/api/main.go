@@ -69,14 +69,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/v1/", apiServer)
-	mux.HandleFunc("/healthz", apiServer.ServeHTTP)
-	mux.Handle("/", http.FileServer(http.FS(webRoot)))
+	openAPISpec, err := loadOpenAPISpec()
+	if err != nil {
+		logger.Error("failed to load OpenAPI specification", "err", err)
+		os.Exit(1)
+	}
 
 	srv := &http.Server{
 		Addr:         ":" + strconv.Itoa(cfg.port),
-		Handler:      mux,
+		Handler:      api.NewAppHandler(apiServer, webRoot, openAPISpec),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -88,4 +89,23 @@ func main() {
 		logger.Error("server error", "err", err)
 		os.Exit(1)
 	}
+}
+
+func loadOpenAPISpec() ([]byte, error) {
+	paths := []string{
+		"api/openapi.yaml",
+		"/api/openapi.yaml",
+	}
+
+	for _, path := range paths {
+		spec, err := os.ReadFile(path)
+		if err == nil {
+			return spec, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+
+	return nil, os.ErrNotExist
 }

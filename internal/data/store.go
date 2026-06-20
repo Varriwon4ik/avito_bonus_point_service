@@ -17,6 +17,23 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{DB: db}
 }
 
+type rowQuerier interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func userExists(ctx context.Context, q rowQuerier, userID string) (bool, error) {
+	var exists bool
+	err := q.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM points_lots WHERE user_id = $1
+			UNION ALL
+			SELECT 1 FROM holds WHERE user_id = $1
+			UNION ALL
+			SELECT 1 FROM ledger_entries WHERE user_id = $1
+		)`, userID).Scan(&exists)
+	return exists, err
+}
+
 // withIdempotency runs fn inside a transaction. If a non-empty idempotency
 // key was already used for this endpoint, the previously stored response is
 // returned without re-running fn (so retries of the same logical request are
@@ -36,6 +53,9 @@ func (s *Store) withIdempotency(ctx context.Context, key, endpoint string, fn fu
 			key, endpoint).Scan(&status, &body)
 		switch {
 		case err == nil:
+			if status == 0 || len(body) == 0 {
+				return 0, nil, ErrIdempotencyConflict
+			}
 			if err := tx.Commit(); err != nil {
 				return 0, nil, err
 			}
