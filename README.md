@@ -54,9 +54,16 @@ go run ./cmd/api
 
 Sanitized example environment values are available in [`.env.example`](./.env.example).
 
-## Week 2 Submission
+## Submissions
 
-The public Week 2 assignment index is available at [reports/week2/README.md](./reports/week2/README.md), and the MVP v0 write-up is available directly at [reports/week2/mvp-v0-report.md](./reports/week2/mvp-v0-report.md).
+- **Week 3 (Assignment 3, MVP v1):** public report index at
+  [reports/week3/README.md](./reports/week3/README.md). Current backlog registry:
+  [docs/user-stories.md](./docs/user-stories.md). Release mapped to MVP v1:
+  [v1.0.0](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.0.0).
+  See also [CHANGELOG.md](./CHANGELOG.md), [docs/roadmap.md](./docs/roadmap.md),
+  and [docs/definition-of-done.md](./docs/definition-of-done.md).
+- **Week 2:** public index at [reports/week2/README.md](./reports/week2/README.md),
+  MVP v0 write-up at [reports/week2/mvp-v0-report.md](./reports/week2/mvp-v0-report.md).
 
 ## API
 
