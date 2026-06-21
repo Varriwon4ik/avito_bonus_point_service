@@ -20,3 +20,6 @@ jobs:
         with:
           args: --verbose --no-progress --exclude-file .lycheeignore "./**/*.md"
           fail: true
+          # Authenticate GitHub requests so release/compare URLs are not
+          # rate-limited to spurious 404s on anonymous CI runs.
+          token: ${{ secrets.GITHUB_TOKEN }}
