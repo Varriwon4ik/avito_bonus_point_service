@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: User Story Index
+    url: https://github.com/Varriwon4ik/avito_bonus_point_service/blob/main/docs/user-stories.md
+    about: The authoritative registry of stable user-story IDs and current membership.
