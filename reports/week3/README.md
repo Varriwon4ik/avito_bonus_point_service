@@ -66,7 +66,7 @@ to delivered `Must Have` user stories plus their supporting technical PBIs:
 ## 13. PBI types, statuses, priorities, Sprint & MVP tracking
 
 We follow the shared definitions in
-[Process_Requirements.md](../../Process_Requirements.md):
+[Process_Requirements.md](../../docs/Process_Requirements.md):
 
 - **Types:** User Story, Other PBI (technical/infra/docs/testing/deployment),
   Course Task, Bug Report — see the issue templates in
@@ -131,7 +131,7 @@ improvement requests.
 - **SemVer release mapped to MVP v1:**
   [v1.0.0](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.0.0)
 - **Root changelog:** [CHANGELOG.md](../../CHANGELOG.md)
-- **Process requirements:** [Process_Requirements.md](../../Process_Requirements.md)
+- **Process requirements:** [Process_Requirements.md](../../docs/Process_Requirements.md)
 - **Roadmap:** [docs/roadmap.md](../../docs/roadmap.md)
 - **Definition of Done:** [docs/definition-of-done.md](../../docs/definition-of-done.md)
 - **Issue templates:** [.github/ISSUE_TEMPLATE/](../../.github/ISSUE_TEMPLATE/)
