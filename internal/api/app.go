@@ -13,6 +13,10 @@ func NewAppHandler(apiServer *Server, webRoot fs.FS, openAPISpec []byte) http.Ha
 	mux.Handle("/v1/", apiServer)
 	mux.HandleFunc("/healthz", apiServer.ServeHTTP)
 
+	// /metrics is deliberately unauthenticated so an internal Prometheus
+	// scraper can reach it.
+	mux.HandleFunc("GET /metrics", apiServer.handleMetrics)
+
 	if len(openAPISpec) > 0 {
 		mux.HandleFunc("GET /openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/yaml")
@@ -30,7 +34,10 @@ func NewAppHandler(apiServer *Server, webRoot fs.FS, openAPISpec []byte) http.Ha
 		mux.Handle("/", http.FileServer(http.FS(webRoot)))
 	}
 
-	return mux
+	// Wrap everything in the observability middleware so every request is
+	// logged in a structured form and counted/timed. apiServer.Mux is passed
+	// so the middleware can recover the templated route pattern for labels.
+	return observe(mux, apiServer.Mux, apiServer.Logger, apiServer.Metrics)
 }
 
 const swaggerUIPage = `<!DOCTYPE html>

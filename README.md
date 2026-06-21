@@ -18,6 +18,9 @@ addressing the problems of the original prototype:
   result instead of being applied twice.
 - Debits/holds always consume the **soonest-to-expire points first** (FIFO
   by `expires_at`), not in accrual order.
+- Every request is **logged in structured form** (method, route, status,
+  latency, and `user_id` where applicable) and a Prometheus `/metrics`
+  endpoint exposes request counts/latencies plus ledger-level gauges.
 
 ## Architecture
 
@@ -143,6 +146,34 @@ Content-Type: application/json
 GET /v1/users/{id}/lots
 GET /v1/users/{id}/transactions?limit=100
 ```
+
+## Observability
+
+Every request passes through a logging/metrics middleware that never reads or
+logs the request body, so no sensitive payload data ends up in logs. Each
+request emits one structured log line:
+
+```text
+level=INFO msg=http_request method=GET path=/v1/users/{id}/balance status=200 latency_ms=3 bytes=112 user_id=user_123
+```
+
+The route `path` is the templated pattern (e.g. `/v1/users/{id}/balance`), not
+the concrete path, which keeps log/metric label cardinality bounded.
+
+### Metrics endpoint
+
+```http
+GET /metrics
+```
+
+Returns Prometheus text exposition format (unauthenticated, for an internal
+scraper). It exposes:
+
+- `http_requests_total{method,path,status}` — request counter
+- `http_request_duration_seconds{method,path}` — latency histogram
+  (`_bucket` / `_sum` / `_count`)
+- `bonus_points_available`, `bonus_points_held`, `bonus_active_holds`,
+  `bonus_lots_total`, `bonus_users_total` — ledger-level gauges
 
 ## Tests
 
