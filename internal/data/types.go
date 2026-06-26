@@ -59,6 +59,15 @@ type LedgerEntry struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// PaginatedLedger wraps a page of ledger entries with pagination metadata.
+type PaginatedLedger struct {
+	UserID  string        `json:"user_id"`
+	Page    int           `json:"page"`
+	Offset  int           `json:"offset"`
+	Total   int           `json:"total"`
+	Entries []LedgerEntry `json:"entries"`
+}
+
 // LotInfo describes a single batch of accrued points and its remaining balance.
 type LotInfo struct {
 	LotID     int64     `json:"lot_id"`

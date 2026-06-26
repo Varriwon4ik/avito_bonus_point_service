@@ -285,8 +285,8 @@ func TestInvalidPaginationReturnsBadRequest(t *testing.T) {
 	user := "user_pagination"
 	mustAccrue(t, env, user, 100, 30, "acc-1")
 
-	status, header, body := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/transactions?limit=999", nil)
-	assertErrorResponse(t, status, header, body, http.StatusBadRequest, "bad_request", "limit must be between 1 and 500")
+	status, header, body := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/transactions?offset=999", nil)
+	assertErrorResponse(t, status, header, body, http.StatusBadRequest, "bad_request", "offset must be between 1 and 500")
 }
 
 func TestUnknownUserReturnsNotFound(t *testing.T) {
