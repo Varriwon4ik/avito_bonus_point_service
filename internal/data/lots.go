@@ -107,37 +107,45 @@ func (s *Store) ListLots(ctx context.Context, userID string) ([]LotInfo, error) 
 	return lots, rows.Err()
 }
 
-// ListLedger returns the most recent ledger entries for a user, newest first.
-func (s *Store) ListLedger(ctx context.Context, userID string, limit int) ([]LedgerEntry, error) {
-	if limit <= 0 || limit > 500 {
-		limit = 100
-	}
+// ListLedger returns a single page of ledger entries for a user, newest first.
+// page is 1-based; offset is the number of entries per page (1–500).
+func (s *Store) ListLedger(ctx context.Context, userID string, page, offset int) (PaginatedLedger, error) {
+	result := PaginatedLedger{UserID: userID, Page: page, Offset: offset}
 
 	exists, err := userExists(ctx, s.DB, userID)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	if !exists {
-		return nil, ErrUserNotFound
+		return result, ErrUserNotFound
 	}
 
+	// Count total entries for this user so callers can compute page counts.
+	if err := s.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM ledger_entries WHERE user_id = $1`, userID,
+	).Scan(&result.Total); err != nil {
+		return result, err
+	}
+
+	skip := (page - 1) * offset
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, user_id, type, amount, ref_type, ref_id, note, created_at FROM ledger_entries
+		SELECT id, user_id, type, amount, ref_type, ref_id, note, created_at
+		FROM ledger_entries
 		WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC
-		LIMIT $2`, userID, limit)
+		LIMIT $2 OFFSET $3`, userID, offset, skip)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	defer rows.Close()
 
-	entries := []LedgerEntry{}
+	result.Entries = []LedgerEntry{}
 	for rows.Next() {
 		var e LedgerEntry
 		if err := rows.Scan(&e.ID, &e.UserID, &e.Type, &e.Amount, &e.RefType, &e.RefID, &e.Note, &e.CreatedAt); err != nil {
-			return nil, err
+			return result, err
 		}
-		entries = append(entries, e)
+		result.Entries = append(result.Entries, e)
 	}
-	return entries, rows.Err()
+	return result, rows.Err()
 }
