@@ -33,7 +33,7 @@ func newTestStore(t *testing.T) *data.Store {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	for _, table := range []string{"hold_allocations", "holds", "ledger_entries", "points_lots", "idempotency_keys"} {
+	for _, table := range []string{"hold_allocations", "holds", "ledger_entries", "points_lots", "idempotency_keys", "autotest_scenarios"} {
 		if _, err := db.Exec("TRUNCATE TABLE " + table + " RESTART IDENTITY CASCADE"); err != nil {
 			t.Fatalf("truncate %s: %v", table, err)
 		}
@@ -96,12 +96,12 @@ func TestExpireStaleHolds(t *testing.T) {
 		t.Fatalf("expected available=800 held=200, got available=%d held=%d", bal.Available, bal.Held)
 	}
 
-	entries, err := store.ListLedger(ctx, user, 10)
+	entries, err := store.ListLedger(ctx, user, 1, 10)
 	if err != nil {
 		t.Fatalf("list ledger: %v", err)
 	}
 	var found bool
-	for _, e := range entries {
+	for _, e := range entries.Entries {
 		if e.RefID != nil && *e.RefID == staleID && e.Type == "cancel" {
 			if e.Note == nil || *e.Note != "auto-released: timeout" {
 				t.Fatalf("expected ledger entry for hold %d to be annotated, got note=%v", staleID, e.Note)
