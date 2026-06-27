@@ -47,7 +47,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	for _, table := range []string{"hold_allocations", "holds", "ledger_entries", "points_lots", "idempotency_keys"} {
+	for _, table := range []string{"hold_allocations", "holds", "ledger_entries", "points_lots", "idempotency_keys", "autotest_scenarios"} {
 		if _, err := db.Exec("TRUNCATE TABLE " + table + " RESTART IDENTITY CASCADE"); err != nil {
 			t.Fatalf("truncate %s: %v", table, err)
 		}
@@ -197,6 +197,41 @@ func TestAccrualIdempotency(t *testing.T) {
 	assertJSONContentType(t, header)
 	if bal["available"].(float64) != 100 {
 		t.Fatalf("expected available=100 after idempotent retry, got %v", bal["available"])
+	}
+}
+
+func TestAccrualLabelIsStoredInLedger(t *testing.T) {
+	env := newTestEnv(t)
+	user := "user_labelled"
+
+	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", map[string]any{
+		"amount":          125,
+		"ttl_days":        30,
+		"idempotency_key": "order-labelled",
+		"label":           "test",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("labelled accrual: status=%d body=%v", status, body)
+	}
+	assertJSONContentType(t, header)
+
+	status, header, ledger := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/transactions?page=1&offset=20", nil)
+	if status != http.StatusOK {
+		t.Fatalf("transactions: status=%d body=%v", status, ledger)
+	}
+	assertJSONContentType(t, header)
+
+	entries, ok := ledger["entries"].([]any)
+	if !ok || len(entries) == 0 {
+		t.Fatalf("expected at least one ledger entry, got %v", ledger["entries"])
+	}
+
+	first, ok := entries[0].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected ledger entry payload: %T", entries[0])
+	}
+	if first["note"] != "test" {
+		t.Fatalf("expected ledger note=test, got %v", first["note"])
 	}
 }
 

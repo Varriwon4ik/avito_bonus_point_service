@@ -414,6 +414,11 @@ components:
           type: string
           minLength: 1
           example: order_12345
+        label:
+          type: string
+          minLength: 1
+          description: Optional ledger label stored in the entry note field. Autotest uses `test`.
+          example: test
     AmountRequest:
       type: object
       required: [amount, idempotency_key]
@@ -542,7 +547,7 @@ components:
         note:
           type: string
           nullable: true
-          example: 'auto-released: timeout'
+          example: test
         created_at:
           type: string
           format: date-time
