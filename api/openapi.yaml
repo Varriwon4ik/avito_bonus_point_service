@@ -61,6 +61,11 @@ paths:
       description: |
         Supports manual admin accrual and service-side accrual after purchase confirmation.
         Implemented in MVP v0.
+
+        Admin-only operation (US-07). When an admin token is configured on the
+        server, requests must present `Authorization: Bearer <token>`.
+      security:
+        - adminBearer: []
       parameters:
         - $ref: '#/components/parameters/UserId'
       requestBody:
@@ -78,6 +83,12 @@ paths:
                 $ref: '#/components/schemas/AccrualResult'
         '400':
           description: Malformed JSON, missing required fields, invalid amount, or invalid TTL value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin credentials
           content:
             application/json:
               schema:
@@ -373,6 +384,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
+  securitySchemes:
+    adminBearer:
+      type: http
+      scheme: bearer
+      description: |
+        Static admin bearer token (US-07). Configured server-side via
+        ADMIN_API_TOKEN / -admin-token. When unset, admin authentication is
+        disabled and the operation is open.
   parameters:
     UserId:
       in: path

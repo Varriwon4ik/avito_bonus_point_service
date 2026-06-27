@@ -29,6 +29,7 @@ type config struct {
 	dsn              string
 	defaultTTLDays   int
 	holdTimeoutHours int
+	adminToken       string
 }
 
 func main() {
@@ -51,6 +52,8 @@ func main() {
 	}
 	flag.IntVar(&cfg.holdTimeoutHours, "hold-timeout-hours", holdTimeoutHours,
 		"holds left active/unresolved for longer than this are automatically released")
+	flag.StringVar(&cfg.adminToken, "admin-token", os.Getenv("ADMIN_API_TOKEN"),
+		"bearer token required for admin-only operations (manual accrual); empty disables admin auth")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -75,6 +78,10 @@ func main() {
 
 	store := data.NewStore(db)
 	apiServer := api.NewServer(store, logger, cfg.defaultTTLDays)
+	apiServer.AdminToken = cfg.adminToken
+	if cfg.adminToken == "" {
+		logger.Warn("ADMIN_API_TOKEN is not set: admin-only operations (manual accrual) are UNAUTHENTICATED")
+	}
 
 	go runHoldSweep(context.Background(), store, cfg.holdTimeoutHours, logger)
 
@@ -99,7 +106,7 @@ func main() {
 	}
 
 	logger.Info("starting server", "port", cfg.port, "default_ttl_days", cfg.defaultTTLDays,
-		"hold_timeout_hours", cfg.holdTimeoutHours)
+		"hold_timeout_hours", cfg.holdTimeoutHours, "admin_auth_enabled", cfg.adminToken != "")
 	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server error", "err", err)

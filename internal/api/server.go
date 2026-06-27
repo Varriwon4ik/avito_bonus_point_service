@@ -18,6 +18,10 @@ type Server struct {
 	DefaultTTLDays int
 	Mux            *http.ServeMux
 	Metrics        *Metrics
+	// AdminToken is the bearer token required for privileged admin operations
+	// (e.g. manual accrual, US-07). When empty, admin authentication is
+	// disabled and those endpoints are open.
+	AdminToken string
 }
 
 func NewServer(store *data.Store, logger *slog.Logger, defaultTTLDays int) *Server {
@@ -63,6 +67,8 @@ func errorCode(status int) string {
 	switch status {
 	case http.StatusBadRequest:
 		return "bad_request"
+	case http.StatusUnauthorized:
+		return "unauthorized"
 	case http.StatusNotFound:
 		return "not_found"
 	case http.StatusConflict:
@@ -83,6 +89,10 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 func badRequest(w http.ResponseWriter, message string) {
 	writeError(w, http.StatusBadRequest, message)
+}
+
+func unauthorized(w http.ResponseWriter, message string) {
+	writeError(w, http.StatusUnauthorized, message)
 }
 
 func notFound(w http.ResponseWriter, message string) {
