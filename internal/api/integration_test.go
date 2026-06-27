@@ -61,6 +61,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	store := data.NewStore(db)
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	os.Setenv("ADMIN_AUTH_TOKEN", testAdminToken)
 	handler := api.NewAppHandler(api.NewServer(store, logger, 365), nil, spec)
 
 	ts := httptest.NewServer(handler)
@@ -75,7 +76,13 @@ type httpResult struct {
 	Body       []byte
 }
 
+const testAdminToken = "test-admin-token"
+
 func doRaw(t *testing.T, method, url, contentType string, body []byte) httpResult {
+	return doRawWithHeaders(t, method, url, contentType, body, nil)
+}
+
+func doRawWithHeaders(t *testing.T, method, url, contentType string, body []byte, headers map[string]string) httpResult {
 	t.Helper()
 
 	var reader io.Reader
@@ -89,6 +96,9 @@ func doRaw(t *testing.T, method, url, contentType string, body []byte) httpResul
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -110,6 +120,10 @@ func doRaw(t *testing.T, method, url, contentType string, body []byte) httpResul
 }
 
 func doJSON(t *testing.T, method, url string, payload any) (int, http.Header, map[string]any) {
+	return doJSONWithHeaders(t, method, url, payload, nil)
+}
+
+func doJSONWithHeaders(t *testing.T, method, url string, payload any, headers map[string]string) (int, http.Header, map[string]any) {
 	t.Helper()
 
 	var body []byte
@@ -123,7 +137,7 @@ func doJSON(t *testing.T, method, url string, payload any) (int, http.Header, ma
 		contentType = "application/json"
 	}
 
-	resp := doRaw(t, method, url, contentType, body)
+	resp := doRawWithHeaders(t, method, url, contentType, body, headers)
 	return resp.StatusCode, resp.Header, decodeJSONMap(t, resp.Body)
 }
 
@@ -160,12 +174,22 @@ func assertErrorResponse(t *testing.T, status int, header http.Header, body map[
 
 func mustAccrue(t *testing.T, env *testEnv, user string, amount, ttlDays int, idem string) {
 	t.Helper()
-	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals",
-		map[string]any{"amount": amount, "ttl_days": ttlDays, "idempotency_key": idem})
+	status, header, body := doJSONWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals",
+		map[string]any{"amount": amount, "ttl_days": ttlDays, "idempotency_key": idem}, map[string]string{
+			"Authorization": "Bearer " + testAdminToken,
+		})
 	if status != http.StatusCreated {
 		t.Fatalf("accrue: status=%d body=%v", status, body)
 	}
 	assertJSONContentType(t, header)
+}
+
+func TestAdminAccrualRequiresAuthentication(t *testing.T) {
+	env := newTestEnv(t)
+
+	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
+		map[string]any{"amount": 100, "ttl_days": 30, "idempotency_key": "order-1"})
+	assertErrorResponse(t, status, header, body, http.StatusUnauthorized, "unauthorized", "admin authentication required")
 }
 
 func TestAccrualIdempotency(t *testing.T) {
@@ -174,14 +198,18 @@ func TestAccrualIdempotency(t *testing.T) {
 
 	payload := map[string]any{"amount": 100, "ttl_days": 30, "idempotency_key": "order-1"}
 
-	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", payload)
+	status, header, body := doJSONWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", payload, map[string]string{
+		"Authorization": "Bearer " + testAdminToken,
+	})
 	if status != http.StatusCreated {
 		t.Fatalf("first accrual: status=%d body=%v", status, body)
 	}
 	assertJSONContentType(t, header)
 	firstLotID := body["lot_id"]
 
-	status, header, body2 := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", payload)
+	status, header, body2 := doJSONWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", payload, map[string]string{
+		"Authorization": "Bearer " + testAdminToken,
+	})
 	if status != http.StatusCreated {
 		t.Fatalf("second accrual: status=%d body=%v", status, body2)
 	}
@@ -255,7 +283,7 @@ func TestHoldConfirmCancel(t *testing.T) {
 func TestMalformedJSONReturnsBadRequest(t *testing.T) {
 	env := newTestEnv(t)
 
-	resp := doRaw(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals", "application/json", []byte(`{"amount":`))
+	resp := doRawWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals", "application/json", []byte(`{"amount":`), map[string]string{"Authorization": "Bearer " + testAdminToken})
 	body := decodeJSONMap(t, resp.Body)
 	assertErrorResponse(t, resp.StatusCode, resp.Header, body, http.StatusBadRequest, "bad_request", "request body contains malformed JSON")
 }
@@ -263,8 +291,8 @@ func TestMalformedJSONReturnsBadRequest(t *testing.T) {
 func TestMissingRequiredFieldReturnsBadRequest(t *testing.T) {
 	env := newTestEnv(t)
 
-	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
-		map[string]any{"amount": 100})
+	status, header, body := doJSONWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
+		map[string]any{"amount": 100}, map[string]string{"Authorization": "Bearer " + testAdminToken})
 	assertErrorResponse(t, status, header, body, http.StatusBadRequest, "bad_request", "idempotency_key is required")
 }
 
@@ -273,8 +301,8 @@ func TestInvalidAmountReturnsBadRequest(t *testing.T) {
 		t.Run(fmt.Sprintf("amount=%d", amount), func(t *testing.T) {
 			env := newTestEnv(t)
 
-			status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
-				map[string]any{"amount": amount, "idempotency_key": "order-1"})
+			status, header, body := doJSONWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
+				map[string]any{"amount": amount, "idempotency_key": "order-1"}, map[string]string{"Authorization": "Bearer " + testAdminToken})
 			assertErrorResponse(t, status, header, body, http.StatusBadRequest, "bad_request", "amount must be a positive integer")
 		})
 	}
@@ -318,8 +346,8 @@ func TestDuplicateIdempotencyKeyReturnsConflict(t *testing.T) {
 		t.Fatalf("seed idempotency key: %v", err)
 	}
 
-	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
-		map[string]any{"amount": 100, "ttl_days": 30, "idempotency_key": "order-1"})
+	status, header, body := doJSONWithHeaders(t, http.MethodPost, env.Server.URL+"/v1/users/user_123/accruals",
+		map[string]any{"amount": 100, "ttl_days": 30, "idempotency_key": "order-1"}, map[string]string{"Authorization": "Bearer " + testAdminToken})
 	assertErrorResponse(t, status, header, body, http.StatusConflict, "conflict", "a request with this idempotency key is already in progress")
 }
 

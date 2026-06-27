@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"bonus-ledger/internal/data"
@@ -16,6 +17,7 @@ type Server struct {
 	Store          *data.Store
 	Logger         *slog.Logger
 	DefaultTTLDays int
+	AdminAuthToken string
 	Mux            *http.ServeMux
 	Metrics        *Metrics
 }
@@ -25,6 +27,7 @@ func NewServer(store *data.Store, logger *slog.Logger, defaultTTLDays int) *Serv
 		Store:          store,
 		Logger:         logger,
 		DefaultTTLDays: defaultTTLDays,
+		AdminAuthToken: os.Getenv("ADMIN_AUTH_TOKEN"),
 		Mux:            http.NewServeMux(),
 		Metrics:        NewMetrics(),
 	}
@@ -63,6 +66,8 @@ func errorCode(status int) string {
 	switch status {
 	case http.StatusBadRequest:
 		return "bad_request"
+	case http.StatusUnauthorized:
+		return "unauthorized"
 	case http.StatusNotFound:
 		return "not_found"
 	case http.StatusConflict:
@@ -83,6 +88,10 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 func badRequest(w http.ResponseWriter, message string) {
 	writeError(w, http.StatusBadRequest, message)
+}
+
+func unauthorized(w http.ResponseWriter, message string) {
+	writeError(w, http.StatusUnauthorized, message)
 }
 
 func notFound(w http.ResponseWriter, message string) {

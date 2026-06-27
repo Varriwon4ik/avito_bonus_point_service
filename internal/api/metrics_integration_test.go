@@ -15,10 +15,10 @@ func TestMetricsEndpoint(t *testing.T) {
 	base := env.Server.URL
 
 	// Generate some traffic across a couple of routes.
-	doJSON(t, "POST", base+"/v1/users/u-metrics/accruals", map[string]any{
+	doJSONWithHeaders(t, "POST", base+"/v1/users/u-metrics/accruals", map[string]any{
 		"amount":          500,
 		"idempotency_key": "metrics-accrue-1",
-	})
+	}, map[string]string{"Authorization": "Bearer " + testAdminToken})
 	doJSON(t, "GET", base+"/v1/users/u-metrics/balance", nil)
 	doJSON(t, "POST", base+"/v1/users/u-metrics/holds", map[string]any{
 		"amount":          120,

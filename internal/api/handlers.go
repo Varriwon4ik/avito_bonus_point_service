@@ -32,6 +32,10 @@ type accrueRequest struct {
 // баллы" with a configurable (and optionally per-request) lifetime, and is
 // idempotent via idempotency_key.
 func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
+	if !s.requireAdminAuth(w, r) {
+		return
+	}
+
 	userID := r.PathValue("id")
 
 	var req accrueRequest
@@ -67,6 +71,27 @@ func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
 
 // handleBalance implements "по каждому пользователю можно узнать сколько у
 // него баллов и сколько баллов сгорит в ближайшие дни".
+func (s *Server) requireAdminAuth(w http.ResponseWriter, r *http.Request) bool {
+	if s.AdminAuthToken == "" {
+		unauthorized(w, "admin authentication required")
+		return false
+	}
+
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		unauthorized(w, "admin authentication required")
+		return false
+	}
+
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if token != s.AdminAuthToken {
+		unauthorized(w, "admin authentication required")
+		return false
+	}
+
+	return true
+}
+
 func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("id")
 

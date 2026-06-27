@@ -29,6 +29,11 @@ import (
 // Alexander: two simultaneous debits that together exceed the balance must
 // result in one success and one 409, with the final balance reflecting only
 // the winning debit — never a double-spend.
+func newTestServer(t *testing.T) *testEnv {
+	t.Helper()
+	return newTestEnv(t)
+}
+
 func TestConcurrentDebitRaceCondition(t *testing.T) {
 	ts := newTestServer(t)
 	user := "user_concurrent_debit"
@@ -52,8 +57,8 @@ func TestConcurrentDebitRaceCondition(t *testing.T) {
 		ready.Done() // signal this goroutine is ready
 		ready.Wait() // wait until both goroutines are ready before sending
 
-		status, body := doJSON(t, http.MethodPost,
-			ts.URL+"/v1/users/"+user+"/debits",
+		status, _, body := doJSON(t, http.MethodPost,
+			ts.Server.URL+"/v1/users/"+user+"/debits",
 			map[string]any{"amount": amount, "idempotency_key": key},
 		)
 		resultCh <- result{status, body}
@@ -103,7 +108,7 @@ func TestConcurrentDebitRaceCondition(t *testing.T) {
 	// the DB would have prevented that and left an inconsistent state).
 	expectedAvailable := 1000 - int(winnerAmount)
 
-	status, bal := doJSON(t, http.MethodGet, ts.URL+"/v1/users/"+user+"/balance", nil)
+	status, _, bal := doJSON(t, http.MethodGet, ts.Server.URL+"/v1/users/"+user+"/balance", nil)
 	if status != http.StatusOK {
 		t.Fatalf("balance check failed: status=%d body=%v", status, bal)
 	}
@@ -143,13 +148,14 @@ func TestConcurrentSameKeyDeduplication(t *testing.T) {
 		ready.Done()
 		ready.Wait()
 
-		status, body := doJSON(t, http.MethodPost,
-			ts.URL+"/v1/users/"+user+"/accruals",
+		status, _, body := doJSONWithHeaders(t, http.MethodPost,
+			ts.Server.URL+"/v1/users/"+user+"/accruals",
 			map[string]any{
 				"amount":          500,
 				"ttl_days":        30,
 				"idempotency_key": "same-key-accrual", // identical key on both goroutines
 			},
+			map[string]string{"Authorization": "Bearer " + testAdminToken},
 		)
 		t.Logf("goroutine %d → status=%d body=%v", goroutineID, status, body)
 		resultCh <- result{status, body}
@@ -173,7 +179,7 @@ func TestConcurrentSameKeyDeduplication(t *testing.T) {
 	}
 
 	// The user's balance must be exactly 500, never 1000 (no double-credit).
-	status, bal := doJSON(t, http.MethodGet, ts.URL+"/v1/users/"+user+"/balance", nil)
+	status, _, bal := doJSON(t, http.MethodGet, ts.Server.URL+"/v1/users/"+user+"/balance", nil)
 	if status != http.StatusOK {
 		t.Fatalf("balance check failed: status=%d body=%v", status, bal)
 	}
@@ -211,8 +217,8 @@ func TestConcurrentHoldsExhaustBalance(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			status, body := doJSON(t, http.MethodPost,
-				ts.URL+"/v1/users/"+user+"/holds",
+			status, _, body := doJSON(t, http.MethodPost,
+				ts.Server.URL+"/v1/users/"+user+"/holds",
 				map[string]any{
 					"amount":          holdAmount,
 					"idempotency_key": fmt.Sprintf("hold-exhaust-%d", i),
@@ -238,7 +244,7 @@ func TestConcurrentHoldsExhaustBalance(t *testing.T) {
 		t.Errorf("double-spend detected: total held=%d exceeds initial balance=%d", totalHeld, initialBalance)
 	}
 
-	status, bal := doJSON(t, http.MethodGet, ts.URL+"/v1/users/"+user+"/balance", nil)
+	status, _, bal := doJSON(t, http.MethodGet, ts.Server.URL+"/v1/users/"+user+"/balance", nil)
 	if status != http.StatusOK {
 		t.Fatalf("balance check: status=%d body=%v", status, bal)
 	}

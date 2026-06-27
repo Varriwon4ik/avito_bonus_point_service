@@ -76,6 +76,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccrualResult'
+        '401':
+          description: Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Malformed JSON, missing required fields, invalid amount, or invalid TTL value
           content:
