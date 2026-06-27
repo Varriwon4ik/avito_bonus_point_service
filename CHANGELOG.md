@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Continuous integration pipeline (US-14).** A GitHub Actions workflow
+  (`.github/workflows/ci.yml`) runs on every push and every pull request to
+  `main`. It provisions a Postgres service container, pins the Go toolchain to
+  the version in `go.mod`, and runs `go mod verify`, `gofmt`, `go vet`,
+  `go build` and the full test suite with the race detector. Failures produce a
+  status check that can be made required in branch protection, so regressions
+  are caught before merge and `main` stays releasable. (#28)
 - **Admin authentication for manual accrual (US-07).** The manual accrual
   endpoint (`POST /v1/users/{id}/accruals`) is now guarded by a static admin
   bearer token configured via `ADMIN_API_TOKEN` / `-admin-token`. Requests must

@@ -1,5 +1,7 @@
 # Bonus Points Ledger Service
 
+[![CI](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml/badge.svg)](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml)
+
 A REST-like service for managing an online store's bonus-points program,
 addressing the problems of the original prototype:
 
@@ -201,3 +203,14 @@ docker compose up -d postgres
 export TEST_DATABASE_URL="postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable"
 go test ./...
 ```
+
+## Continuous integration
+
+Every push and every pull request to `main` is gated by the
+[CI workflow](.github/workflows/ci.yml) (US-14). On GitHub's hosted runners it
+spins up a Postgres service container (matching `docker-compose.yml`), pins the
+Go toolchain to the version declared in `go.mod`, and runs `go mod verify`,
+`gofmt`, `go vet`, `go build ./...` and the full test suite with the race
+detector (`go test ./... -race`). A failing build or test produces a failing
+status check; configure it as a required check in branch protection so broken
+changes cannot be merged and `main` stays releasable.

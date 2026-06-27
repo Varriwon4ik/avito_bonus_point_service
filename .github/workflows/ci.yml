@@ -1,0 +1,86 @@
+name: CI
+
+# Continuous integration gate (US-14). Builds the service and runs the full
+# test suite on every push and every pull request to main, so regressions are
+# caught before merge and main always stays in a releasable state.
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Least-privilege token: CI only needs to read the repository.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same ref so a fresh push supersedes the
+# in-flight build for that branch/PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    # Integration tests run against a real Postgres instance. The credentials
+    # and image match docker-compose.yml so local and CI runs are identical.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bonus
+          POSTGRES_PASSWORD: bonus
+          POSTGRES_DB: bonus_ledger
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bonus"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 20
+
+    env:
+      # Consumed by the integration tests (newTestEnv / newTestStore). Without
+      # it those tests self-skip, so it is required for the suite to be a real
+      # regression gate.
+      TEST_DATABASE_URL: postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Pin the toolchain to the version declared in go.mod (go 1.22) so the
+      # CI build is reproducible and tracks the team's standard toolchain.
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify module dependencies
+        run: go mod verify
+
+      - name: Check formatting (gofmt)
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::The following files are not gofmt-clean:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      # -race surfaces data races (the service has concurrency/idempotency
+      # tests); -count=1 disables the test cache so the gate always re-runs.
+      - name: Test
+        run: go test ./... -race -count=1 -v
