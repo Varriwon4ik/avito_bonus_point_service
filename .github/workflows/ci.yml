@@ -56,8 +56,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Pin the toolchain to the version declared in go.mod (go 1.22) so the
+      # Pin the toolchain to the version declared in go.mod (go 1.25) so the
       # CI build is reproducible and tracks the team's standard toolchain.
+      # 1.25 also remediates the standard-library advisories govulncheck flags.
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
