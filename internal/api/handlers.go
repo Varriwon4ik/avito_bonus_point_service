@@ -33,11 +33,6 @@ type accrueRequest struct {
 // баллы" with a configurable (and optionally per-request) lifetime, and is
 // idempotent via idempotency_key.
 func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
-	// US-07: manual accrual is an admin-only operation.
-	if !s.authorizeAdmin(w, r) {
-		return
-	}
-
 	userID := r.PathValue("id")
 
 	var req accrueRequest

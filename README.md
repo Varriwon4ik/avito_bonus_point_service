@@ -54,7 +54,6 @@ To run locally without Docker:
 export DB_DSN="postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable"
 export DEFAULT_TTL_DAYS=365   # optional, default lifetime of accrued points
 export HOLD_TIMEOUT_HOURS=24  # optional, holds unresolved for longer than this are auto-released
-export ADMIN_API_TOKEN=       # optional, bearer token for admin-only ops (manual accrual, US-07); empty disables auth
 go run ./cmd/api
 ```
 
@@ -73,11 +72,7 @@ Sanitized example environment values are available in [`.env.example`](./.env.ex
 
 ## API
 
-Most endpoints are unauthenticated (internal network only, per spec). The
-manual accrual endpoint is admin-only (US-07): when `ADMIN_API_TOKEN` is set,
-`POST /v1/users/{id}/accruals` requires an `Authorization: Bearer <token>`
-header and returns `401 Unauthorized` for missing or invalid credentials. When
-the token is unset, the check is disabled.
+All endpoints are unauthenticated (internal network only, per spec).
 
 ### Important HTTP status codes
 
@@ -97,11 +92,10 @@ Error responses use a consistent JSON envelope:
 }
 ```
 
-### Accrue points (admin only)
+### Accrue points
 ```http
 POST /v1/users/{id}/accruals
 Content-Type: application/json
-Authorization: Bearer <ADMIN_API_TOKEN>   // required only when ADMIN_API_TOKEN is set
 
 {
   "amount": 500,
@@ -110,7 +104,6 @@ Authorization: Bearer <ADMIN_API_TOKEN>   // required only when ADMIN_API_TOKEN 
 }
 -> 201 { "lot_id": 1, "user_id": "user_123", "amount": 500, "expires_at": "..." }
 -> 400 { "error": "bad_request", "message": "idempotency_key is required" }
--> 401 { "error": "unauthorized", "message": "admin authentication required" }
 ```
 
 ### Get balance

@@ -16,12 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `go build` and the full test suite with the race detector. Failures produce a
   status check that can be made required in branch protection, so regressions
   are caught before merge and `main` stays releasable. (#28)
-- **Admin authentication for manual accrual (US-07).** The manual accrual
-  endpoint (`POST /v1/users/{id}/accruals`) is now guarded by a static admin
-  bearer token configured via `ADMIN_API_TOKEN` / `-admin-token`. Requests must
-  present `Authorization: Bearer <token>`; missing or invalid credentials return
-  `401 Unauthorized`. When no token is configured the check is disabled (open),
-  and the server logs a startup warning. (#4)
 
 ## [1.0.0] - 2026-06-21
 
