@@ -9,13 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Pagination for transaction history (US-09).** `GET /v1/users/{id}/transactions`
+  now returns a structured page envelope (`user_id`, `page`, `offset`, `total`,
+  `entries`) and accepts `page` (1-based page number) and `offset` (page size,
+  `1`–`500`, default `20`) query parameters, so callers can page through a user's
+  newest-first ledger/audit history instead of receiving an unbounded list.
+  Invalid `page` or `offset` values return `400 Bad Request`. (#6, PR #30)
+- **Automated autotester tool (US-15).** A new `cmd/autotest` console tool
+  defines, stores (in a dedicated `autotest_scenarios` table, migration `0003`),
+  and replays reusable accrual test scenarios — including concurrent/parallel
+  requests — against a running instance and reports the observed balance and
+  ledger outcomes, so newly committed code can be regression-checked end-to-end
+  without hand-writing a bespoke test for each case. (#29, PR #31)
 - **Continuous integration pipeline (US-14).** A GitHub Actions workflow
   (`.github/workflows/ci.yml`) runs on every push and every pull request to
   `main`. It provisions a Postgres service container, pins the Go toolchain to
   the version in `go.mod`, and runs `go mod verify`, `gofmt`, `go vet`,
   `go build` and the full test suite with the race detector. Failures produce a
   status check that can be made required in branch protection, so regressions
-  are caught before merge and `main` stays releasable. (#28)
+  are caught before merge and `main` stays releasable. (#28, PR #33)
+
+### Removed
+
+- **Admin authentication for manual accrual (US-07).** An admin bearer-token
+  guard around `POST /v1/users/{id}/accruals` was merged earlier in this cycle
+  (PR #32) but then reverted (PR #34) due to bugs and integration issues found
+  in review, so it never shipped in a tagged release; the endpoint behaves as it
+  did in `v1.0.0`. US-07 is now marked `Removed`, and a different feature was
+  prioritized in its place for the Sprint. (#4)
 
 ## [1.0.0] - 2026-06-21
 
