@@ -80,7 +80,11 @@ jobs:
       - name: Build
         run: go build ./...
 
-      # -race surfaces data races (the service has concurrency/idempotency
-      # tests); -count=1 disables the test cache so the gate always re-runs.
+      # -p 1 runs the package test binaries one at a time. The integration
+      # tests share a single Postgres database (they each run migrations and
+      # TRUNCATE the same tables), so running packages in parallel would race
+      # on schema creation and wipe each other's rows. -race surfaces data
+      # races (the service has concurrency/idempotency tests) and -count=1
+      # disables the test cache so the gate always re-runs.
       - name: Test
-        run: go test ./... -race -count=1 -v
+        run: go test ./... -race -count=1 -p 1 -v
