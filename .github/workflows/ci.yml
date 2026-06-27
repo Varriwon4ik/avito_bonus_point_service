@@ -1,8 +1,10 @@
 name: CI
 
-# Continuous integration gate (US-14). Builds the service and runs the full
-# test suite on every push and every pull request to main, so regressions are
-# caught before merge and main always stays in a releasable state.
+# Continuous integration gate (US-14). Builds the service, runs the full test
+# suite (incl. automated quality requirement tests), enforces per-module line
+# coverage, and scans dependencies for known vulnerabilities on every push and
+# every pull request to main, so regressions are caught before merge and main
+# always stays in a releasable state.
 on:
   push:
     branches:
@@ -27,8 +29,9 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
 
-    # Integration tests run against a real Postgres instance. The credentials
-    # and image match docker-compose.yml so local and CI runs are identical.
+    # Integration and quality requirement tests run against a real Postgres
+    # instance. The credentials and image match docker-compose.yml so local and
+    # CI runs are identical.
     services:
       postgres:
         image: postgres:16-alpine
@@ -45,9 +48,8 @@ jobs:
           --health-retries 20
 
     env:
-      # Consumed by the integration tests (newTestEnv / newTestStore). Without
-      # it those tests self-skip, so it is required for the suite to be a real
-      # regression gate.
+      # Consumed by the integration / QRT tests (newTestEnv). Without it those
+      # tests self-skip, so it is required for the suite to be a real gate.
       TEST_DATABASE_URL: postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable
 
     steps:
@@ -80,11 +82,57 @@ jobs:
       - name: Build
         run: go build ./...
 
+      # Run the automated quality requirement tests on their own first so their
+      # result and timings are independently inspectable in the CI log.
+      # QRT-001 (QR-001 Time behaviour) and QRT-002 (QR-002 Integrity).
+      - name: Quality requirement tests (QRT-001, QRT-002)
+        run: go test ./internal/api/ -race -count=1 -run 'TestQRT' -v
+
       # -p 1 runs the package test binaries one at a time. The integration
       # tests share a single Postgres database (they each run migrations and
       # TRUNCATE the same tables), so running packages in parallel would race
       # on schema creation and wipe each other's rows. -race surfaces data
-      # races (the service has concurrency/idempotency tests) and -count=1
-      # disables the test cache so the gate always re-runs.
-      - name: Test
-        run: go test ./... -race -count=1 -p 1 -v
+      # races and -count=1 disables the test cache so the gate always re-runs.
+      # -coverpkg=./... attributes coverage of every product package to the
+      # whole suite (so e.g. internal/data coverage includes exercise via the
+      # internal/api integration tests).
+      - name: Test with coverage
+        run: go test ./... -race -count=1 -p 1 -coverpkg=./... -coverprofile=coverage.out
+
+      - name: Coverage summary (total)
+        run: go tool cover -func=coverage.out | tail -n 1
+
+      # QRT-003 (QR-003 Testability): each critical module must keep >=30% line
+      # coverage or the build fails.
+      - name: Per-module coverage gate (QRT-003)
+        run: bash scripts/coverage_gate.sh coverage.out
+
+      - name: Upload coverage profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-profile
+          path: coverage.out
+          if-no-files-found: warn
+
+  govulncheck:
+    name: Vulnerability scan (govulncheck)
+    runs-on: ubuntu-latest
+    # Additional QA check (distinct from lint/format/vet, build, unit/
+    # integration tests, coverage, the QRTs and the Lychee link check):
+    # static dependency + stdlib vulnerability analysis against the Go vuln DB.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Run govulncheck
+        run: govulncheck ./...

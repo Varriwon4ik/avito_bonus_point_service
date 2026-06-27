@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `go build` and the full test suite with the race detector. Failures produce a
   status check that can be made required in branch protection, so regressions
   are caught before merge and `main` stays releasable. (#28, PR #33)
+- **Automated quality gates and quality documentation (QR-001/002/003).** CI now
+  runs automated quality requirement tests (balance-read p95 latency; ledger
+  integrity under concurrent debits, race-enabled), a per-module line-coverage
+  gate (≥30% for `internal/data` and `internal/api`), and a `govulncheck`
+  dependency/standard-library vulnerability scan (the additional QA check). Added
+  maintained docs: `docs/quality-requirements.md`,
+  `docs/quality-requirement-tests.md`, `docs/testing.md`, and
+  `docs/user-acceptance-tests.md`. (US-14)
 
 ### Removed
 
