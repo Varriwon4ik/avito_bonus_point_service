@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-28
+
+Sprint 2 increment (Assignment 4, 22–28 Jun 2026). Maps to the
+[Sprint 2 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2):
+US-09, US-14, US-15, plus the automated quality gates. US-07 was reverted.
+
 ### Added
 
 - **Pagination for transaction history (US-09).** `GET /v1/users/{id}/transactions`
@@ -73,5 +79,6 @@ MVP v1 — the first delivered increment (Sprint 1, 15–21 Jun 2026). Maps to t
   status codes (200/201/400/404/409/500) with a consistent JSON error envelope,
   and the OpenAPI specification was updated to match. (#12, PR #15)
 
-[Unreleased]: https://github.com/Varriwon4ik/avito_bonus_point_service/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Varriwon4ik/avito_bonus_point_service/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.0.0
