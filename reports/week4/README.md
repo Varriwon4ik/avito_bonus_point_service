@@ -136,8 +136,9 @@ Details: [docs/quality-requirements.md](../../docs/quality-requirements.md).
 
 ## 11. Demo video
 
-- **Public sanitized demo video (< 2 min):** _pending — link to be added here and
-  on the `v1.1.0` release._ Uses only sanitized demo data.
+- **Public sanitized demo video (< 2 min):**
+  <https://drive.google.com/file/d/14bd3vg6Yz2zFZDcz6Y-l2Ytu-2KV12iv/view?usp=sharing>
+  — uses only sanitized demo data.
 
 ## 12. UAT results (public, sanitized)
 
