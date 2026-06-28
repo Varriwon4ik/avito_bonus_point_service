@@ -196,17 +196,26 @@ and approved the version and the team's design decisions.
 
 ## 18. Screenshots
 
-Add the following to [images/](images/README.md) and embed them here (pending
-capture; filenames listed so the link check stays green):
+Public, sanitized screenshots of the repository and the delivered increment.
 
-- `images/sprint-milestone.png` — Sprint 2 milestone
-- `images/ci-run-main.png` — latest passing CI run on `main`
-- `images/branch-protection.png` — default-branch ruleset evidence
-- `images/coverage.png` — per-module coverage gate / report
-- `images/qa-govulncheck.png` — `govulncheck` result (additional QA check)
-- `images/release.png` — `v1.1.0` SemVer release
-- `images/example-pr.png` — example reviewed, issue-linked PR (e.g. [#30](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/30))
-- `images/product-backlog.png`, `images/sprint-backlog.png` — Project boards
+### Repository on `main` after merging the Sprint 2 work (PR #36)
+
+![Repository on main after merging PR #36](images/repo-main-after-pr36.png)
+
+### Deployed web UI — paginated transaction history (US-09)
+
+![Deployed web UI showing the paginated transactions view](images/deployed-ui-transactions.png)
+
+Further evidence is inspectable at the live links elsewhere in this report: the
+[Sprint 2 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2),
+the [latest CI run on `main`](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml?query=branch%3Amain)
+(showing the QRTs, coverage gate, and `govulncheck` jobs), and the example
+reviewed, issue-linked PR [#30](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/30).
+
+> **Privacy note:** screenshots of the customer-review / UAT video session contain
+> customer-identifying information (faces and names) and are therefore **not**
+> published in this public repository. They are submitted privately through
+> Moodle, consistent with the assignment's public/private evidence rules.
 
 ## 19. Example reviewed, issue-linked PR
 
