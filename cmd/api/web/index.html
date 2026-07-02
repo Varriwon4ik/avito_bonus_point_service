@@ -49,7 +49,6 @@
   .badge-success{background:var(--success-bg);color:var(--success)}
   .badge-warning{background:var(--warning-bg);color:var(--warning)}
   .badge-danger{background:var(--danger-bg);color:var(--danger)}
-  .badge-info{background:var(--info-bg);color:var(--info)}
   .badge-gray{background:var(--surface2);color:var(--text2)}
   .pts-pos{color:var(--success);font-weight:500;font-variant-numeric:tabular-nums}
   .pts-neg{color:var(--danger);font-weight:500;font-variant-numeric:tabular-nums}
@@ -251,7 +250,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Label</th><th>Created</th></tr></thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Created</th></tr></thead>
           <tbody id="ledger-tbody"></tbody>
         </table>
       </div>
@@ -433,22 +432,19 @@ function loadLots() {
 
 function loadLedger() {
   var u = currentUser();
-  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(page) {
-    var entries = (page && page.entries) ? page.entries : [];
+  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(entries) {
     var html = entries.map(function(e) {
       var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
       var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
-      var note = e.note ? '<span class="badge ' + (e.note === 'test' ? 'badge-info' : 'badge-gray') + '">' + e.note + '</span>' : '-';
       return '<tr>' +
         '<td class="td-id">#' + e.id + '</td>' +
         '<td>' + e.type + '</td>' +
         '<td class="' + cls + '">' + (e.amount > 0 ? '+' : '') + e.amount + '</td>' +
         '<td style="color:var(--text2)">' + ref + '</td>' +
-        '<td>' + note + '</td>' +
         '<td style="color:var(--text2)">' + new Date(e.created_at).toLocaleString() + '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
+    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
   }).catch(function(e) {
     showToast('Failed to load transactions: ' + e.message, true);
   });
