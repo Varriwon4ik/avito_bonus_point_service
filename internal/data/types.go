@@ -55,6 +55,7 @@ type LedgerEntry struct {
 	Amount    int       `json:"amount"`
 	RefType   *string   `json:"ref_type,omitempty"`
 	RefID     *int64    `json:"ref_id,omitempty"`
+	Label     *string   `json:"label,omitempty"`
 	Note      *string   `json:"note,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }

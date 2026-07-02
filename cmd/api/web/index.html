@@ -64,6 +64,7 @@
   .input:focus{border-color:var(--accent)}
   .form-row{margin-bottom:14px}
   .form-label{font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+  .form-help{font-size:11.5px;color:var(--text3);margin-top:6px}
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .balance-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;margin-bottom:24px;display:flex;gap:32px;align-items:center;flex-wrap:wrap}
   .balance-pts{font-size:32px;font-weight:700;letter-spacing:-0.04em}
@@ -154,6 +155,21 @@
             <div class="form-row">
               <div class="form-label">Idempotency key <span style="color:var(--text3);font-weight:400">(prevents duplicate accruals)</span></div>
               <input class="input" id="ac-idem" placeholder="e.g. order_12345" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Transaction label (optional)</div>
+              <select class="input" id="ac-label-mode" style="width:100%" onchange="onAccrueLabelModeChanged()">
+                <option value="">No label</option>
+                <option value="test">test</option>
+                <option value="real">real</option>
+                <option value="custom">Custom label</option>
+              </select>
+              <div class="form-help">Use quick labels for test/real transactions or add your own custom label.</div>
+            </div>
+            <div class="form-row">
+              <div class="form-label">Custom label</div>
+              <input class="input" id="ac-custom-label" maxlength="32" placeholder="e.g. qa-run" style="width:100%" disabled>
+              <div class="form-help">Custom labels are trimmed and limited to 32 characters.</div>
             </div>
           </div>
           <button class="btn btn-primary" onclick="submitAccrue()">Accrue points</button>
@@ -251,7 +267,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Label</th><th>Created</th></tr></thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Label</th><th>Note</th><th>Created</th></tr></thead>
           <tbody id="ledger-tbody"></tbody>
         </table>
       </div>
@@ -293,6 +309,27 @@ function showToast(msg, isError) {
   setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
 
+function escapeHTML(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function badgeHTML(value, kind) {
+  return '<span class="badge ' + kind + '">' + escapeHTML(value) + '</span>';
+}
+
+function onAccrueLabelModeChanged() {
+  var mode = document.getElementById('ac-label-mode').value;
+  var custom = document.getElementById('ac-custom-label');
+  var isCustom = mode === 'custom';
+  custom.disabled = !isCustom;
+  if (!isCustom) custom.value = '';
+}
+
 function api(path, opts) {
   return fetch(path, opts).then(function(res) {
     return res.text().then(function(text) {
@@ -326,17 +363,25 @@ function submitAccrue() {
   var amount = parseInt(document.getElementById('ac-amount').value, 10);
   var ttl = document.getElementById('ac-ttl').value;
   var idem = document.getElementById('ac-idem').value.trim();
+  var labelMode = document.getElementById('ac-label-mode').value;
+  var customLabel = document.getElementById('ac-custom-label').value.trim();
   if (!amount || amount <= 0) { showToast('Enter a positive amount', true); return; }
   var payload = { amount: amount, idempotency_key: idem };
   if (ttl) payload.ttl_days = parseInt(ttl, 10);
+  if (labelMode === 'test' || labelMode === 'real') payload.label = labelMode;
+  if (labelMode === 'custom' && customLabel) payload.label = customLabel;
   api('/v1/users/' + encodeURIComponent(u) + '/accruals', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload)
   }).then(function(res) {
     document.getElementById('ac-result').textContent = JSON.stringify(res, null, 2);
-    showToast('Accrued ' + res.amount + ' points to ' + res.user_id);
-    if (u === currentUser()) loadBalance();
+    var labelSuffix = payload.label ? ' [' + payload.label + ']' : '';
+    showToast('Accrued ' + res.amount + ' points to ' + res.user_id + labelSuffix);
+    if (u === currentUser()) {
+      loadBalance();
+      loadLedger();
+    }
   }).catch(function(e) {
     document.getElementById('ac-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -438,23 +483,33 @@ function loadLedger() {
     var html = entries.map(function(e) {
       var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
       var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
-      var note = e.note ? '<span class="badge ' + (e.note === 'test' ? 'badge-info' : 'badge-gray') + '">' + e.note + '</span>' : '-';
+      var label = '-';
+      if (e.label) {
+        var labelClass = e.label === 'test' ? 'badge-info' : (e.label === 'real' ? 'badge-success' : 'badge-gray');
+        label = badgeHTML(e.label, labelClass);
+      }
+      var note = '-';
+      if (e.note && e.note !== e.label) {
+        note = badgeHTML(e.note, 'badge-gray');
+      }
       return '<tr>' +
         '<td class="td-id">#' + e.id + '</td>' +
-        '<td>' + e.type + '</td>' +
+        '<td>' + escapeHTML(e.type) + '</td>' +
         '<td class="' + cls + '">' + (e.amount > 0 ? '+' : '') + e.amount + '</td>' +
-        '<td style="color:var(--text2)">' + ref + '</td>' +
+        '<td style="color:var(--text2)">' + escapeHTML(ref) + '</td>' +
+        '<td>' + label + '</td>' +
         '<td>' + note + '</td>' +
         '<td style="color:var(--text2)">' + new Date(e.created_at).toLocaleString() + '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
+    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
   }).catch(function(e) {
     showToast('Failed to load transactions: ' + e.message, true);
   });
 }
 
 onUserChanged();
+onAccrueLabelModeChanged();
 </script>
 </body>
 </html>

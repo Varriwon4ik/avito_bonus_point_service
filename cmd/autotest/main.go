@@ -649,6 +649,9 @@ func containsAccrualEntry(entries []data.LedgerEntry, lotID int64, amount int, l
 		if label == "" {
 			return true
 		}
+		if entry.Label != nil && *entry.Label == label {
+			return true
+		}
 		if entry.Note != nil && *entry.Note == label {
 			return true
 		}
