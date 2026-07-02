@@ -9,9 +9,10 @@ linked issue for the live statement, acceptance criteria, and discussion.
 - Historical Assignment 2 source: [reports/week2/user-stories.md](../reports/week2/user-stories.md)
 - Process semantics (statuses, MoSCoW, Work Status, traceability): `Process_Requirements.md`
 - Sprint 1 milestone: [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1)
+- Sprint 2 milestone (Assignment 4): [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2)
 
 Active stories are ordered by MoSCoW priority, then Sprint, then stable ID.
-Removed and `Won't Have` stories are listed after all active stories.
+Removed stories are listed after all active stories.
 
 | ID | Short title | MoSCoW priority | Issue | Requirement status | Work Status | Sprint |
 |---|---|---|---|---|---|---|
@@ -19,12 +20,14 @@ Removed and `Won't Have` stories are listed after all active stories.
 | US-11 | Concurrent idempotent-key deduplication tests | Must Have | [#8](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/8) | Active | Done | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
 | US-12 | Points removal / expiry system | Must Have | [#11](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/11) | Active | Done | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
 | US-13 | HTTP response codes & OpenAPI docs | Must Have | [#12](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/12) | Active | Done | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
+| US-14 | Continuous integration pipeline for every change | Must Have | [#28](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/28) | Active | Done | [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
+| US-15 | Automated tests for points accrue (autotester) | Must Have | [#29](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/29) | Active | Done | [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
 | US-10 | Structured request logging & metrics endpoint | Should Have | [#7](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/7) | Active | In Review | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
+| US-09 | Pagination for transaction history | Should Have | [#6](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/6) | Active | Done | [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
 | US-01 | Bulk points accrual for promotional campaigns | Should Have | [#1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1) | Active | To Do | — |
 | US-02 | List and audit a user's points lots | Should Have | [#2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2) | Active | To Do | — |
 | US-08 | Configurable per-accrual TTL validation and bounds | Should Have | [#5](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/5) | Active | To Do | — |
-| US-07 | Manual bonus point accrual | Won't Have | [#4](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/4) | Active | Won't Do | — |
-| US-09 | Pagination for transaction history | Won't Have | [#6](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/6) | Active | Won't Do | — |
+| US-07 | Manual bonus point accrual | — | [#4](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/4) | Removed | — | — |
 | US-03 | Earn bonus points after purchase | — | — | Removed | — | — |
 | US-04 | Maintain automated regression coverage | — | — | Removed | — | — |
 | US-06 | Confirm or cancel reserved points | — | — | Removed | — | — |
@@ -36,13 +39,20 @@ Removed and `Won't Have` stories are listed after all active stories.
   MVP v0 base functionality (purchase-driven accrual, the existing regression
   suite, and the two-phase `hold` / `confirm` / `cancel` flow). Their stable IDs
   are preserved here for traceability; they are not re-issued or reused.
-- **US-07** (manual accrual) and **US-09** (transaction-history pagination) were
-  reprioritized to **`Won't Have`** for the current product increment after the
-  Assignment 3 customer negotiation. Their issues remain open for history and may
-  be reconsidered in a later Sprint; they do not count toward the qualifying-PBI
-  total or the MVP v1 scope.
+- **US-09** (transaction-history pagination) was `Won't Have` after the
+  Assignment 3 customer negotiation, then **reconsidered and delivered in
+  Sprint 2** (Assignment 4) in response to the customer's request to demonstrate
+  paginated access. It is now `Should Have`, `Active`, and `Done`.
+- **US-07** (manual bonus point accrual) was implemented during Sprint 2
+  ([PR #32](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/32))
+  but **reverted** ([PR #34](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/34))
+  after bugs and integration issues surfaced in review, so it never shipped in a
+  tagged release. Its requirement status is now **`Removed`**; the stable ID is
+  preserved for traceability and is not re-issued or reused. The team
+  prioritized a different feature in its place for the Sprint.
 
 ## Stable ID allocation
 
-The highest allocated stable ID is **US-13**. New user stories discovered after
-migration receive the next unused ID starting at **US-14**.
+The highest allocated stable ID is **US-15** (allocated in Sprint 2). New user
+stories discovered after migration receive the next unused ID starting at
+**US-16**.

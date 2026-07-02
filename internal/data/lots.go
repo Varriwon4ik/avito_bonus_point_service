@@ -10,6 +10,12 @@ import (
 // days. If idempotencyKey has been used before for the "accrual" endpoint,
 // the original result is returned and no new points are created.
 func (s *Store) Accrue(ctx context.Context, userID string, amount, ttlDays int, idempotencyKey string) (int, []byte, error) {
+	return s.AccrueWithLabel(ctx, userID, amount, ttlDays, idempotencyKey, "")
+}
+
+// AccrueWithLabel stores the same accrual as Accrue, but annotates the ledger
+// entry with an optional label using the existing note column.
+func (s *Store) AccrueWithLabel(ctx context.Context, userID string, amount, ttlDays int, idempotencyKey, label string) (int, []byte, error) {
 	return s.withIdempotency(ctx, idempotencyKey, "accrual", func(tx *sql.Tx) (int, any, error) {
 		if amount <= 0 {
 			return 0, nil, ErrInvalidAmount
@@ -29,9 +35,14 @@ func (s *Store) Accrue(ctx context.Context, userID string, amount, ttlDays int, 
 			return 0, nil, err
 		}
 
+		var labelArg any
+		if label != "" {
+			labelArg = label
+		}
+
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id)
-			VALUES ($1, 'accrual', $2, 'lot', $3)`, userID, amount, lotID); err != nil {
+			INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id, note)
+			VALUES ($1, 'accrual', $2, 'lot', $3, $4)`, userID, amount, lotID, labelArg); err != nil {
 			return 0, nil, err
 		}
 
