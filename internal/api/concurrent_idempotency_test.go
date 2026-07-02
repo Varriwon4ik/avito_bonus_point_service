@@ -30,11 +30,11 @@ import (
 // result in one success and one 409, with the final balance reflecting only
 // the winning debit — never a double-spend.
 func TestConcurrentDebitRaceCondition(t *testing.T) {
-	ts := newTestServer(t)
+	env := newTestEnv(t)
 	user := "user_concurrent_debit"
 
 	// Give the user exactly 1 000 points.
-	mustAccrue(t, ts, user, 1000, 30, "acc-concurrent")
+	mustAccrue(t, env, user, 1000, 30, "acc-concurrent")
 
 	type result struct {
 		status int
@@ -52,8 +52,8 @@ func TestConcurrentDebitRaceCondition(t *testing.T) {
 		ready.Done() // signal this goroutine is ready
 		ready.Wait() // wait until both goroutines are ready before sending
 
-		status, body := doJSON(t, http.MethodPost,
-			ts.URL+"/v1/users/"+user+"/debits",
+		status, _, body := doJSON(t, http.MethodPost,
+			env.Server.URL+"/v1/users/"+user+"/debits",
 			map[string]any{"amount": amount, "idempotency_key": key},
 		)
 		resultCh <- result{status, body}
@@ -103,7 +103,7 @@ func TestConcurrentDebitRaceCondition(t *testing.T) {
 	// the DB would have prevented that and left an inconsistent state).
 	expectedAvailable := 1000 - int(winnerAmount)
 
-	status, bal := doJSON(t, http.MethodGet, ts.URL+"/v1/users/"+user+"/balance", nil)
+	status, _, bal := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/balance", nil)
 	if status != http.StatusOK {
 		t.Fatalf("balance check failed: status=%d body=%v", status, bal)
 	}
@@ -126,7 +126,7 @@ func TestConcurrentDebitRaceCondition(t *testing.T) {
 // conflict while the first is still in flight). Either way, the accrual must
 // happen exactly once.
 func TestConcurrentSameKeyDeduplication(t *testing.T) {
-	ts := newTestServer(t)
+	env := newTestEnv(t)
 	user := "user_same_key"
 
 	type result struct {
@@ -143,8 +143,8 @@ func TestConcurrentSameKeyDeduplication(t *testing.T) {
 		ready.Done()
 		ready.Wait()
 
-		status, body := doJSON(t, http.MethodPost,
-			ts.URL+"/v1/users/"+user+"/accruals",
+		status, _, body := doJSON(t, http.MethodPost,
+			env.Server.URL+"/v1/users/"+user+"/accruals",
 			map[string]any{
 				"amount":          500,
 				"ttl_days":        30,
@@ -173,7 +173,7 @@ func TestConcurrentSameKeyDeduplication(t *testing.T) {
 	}
 
 	// The user's balance must be exactly 500, never 1000 (no double-credit).
-	status, bal := doJSON(t, http.MethodGet, ts.URL+"/v1/users/"+user+"/balance", nil)
+	status, _, bal := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/balance", nil)
 	if status != http.StatusOK {
 		t.Fatalf("balance check failed: status=%d body=%v", status, bal)
 	}
@@ -190,14 +190,14 @@ func TestConcurrentSameKeyDeduplication(t *testing.T) {
 // N goroutines race to hold the same pool of points; the sum of all
 // successful holds must never exceed the initial balance.
 func TestConcurrentHoldsExhaustBalance(t *testing.T) {
-	ts := newTestServer(t)
+	env := newTestEnv(t)
 	user := "user_exhaust"
 
 	const initialBalance = 1000
 	const holdAmount = 300 // 3 full holds fit (3×300=900), 4th must fail
 	const workers = 6
 
-	mustAccrue(t, ts, user, initialBalance, 30, "acc-exhaust")
+	mustAccrue(t, env, user, initialBalance, 30, "acc-exhaust")
 
 	type result struct {
 		status int
@@ -211,8 +211,8 @@ func TestConcurrentHoldsExhaustBalance(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			status, body := doJSON(t, http.MethodPost,
-				ts.URL+"/v1/users/"+user+"/holds",
+			status, _, body := doJSON(t, http.MethodPost,
+				env.Server.URL+"/v1/users/"+user+"/holds",
 				map[string]any{
 					"amount":          holdAmount,
 					"idempotency_key": fmt.Sprintf("hold-exhaust-%d", i),
@@ -238,7 +238,7 @@ func TestConcurrentHoldsExhaustBalance(t *testing.T) {
 		t.Errorf("double-spend detected: total held=%d exceeds initial balance=%d", totalHeld, initialBalance)
 	}
 
-	status, bal := doJSON(t, http.MethodGet, ts.URL+"/v1/users/"+user+"/balance", nil)
+	status, _, bal := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/balance", nil)
 	if status != http.StatusOK {
 		t.Fatalf("balance check: status=%d body=%v", status, bal)
 	}
