@@ -49,7 +49,6 @@
   .badge-success{background:var(--success-bg);color:var(--success)}
   .badge-warning{background:var(--warning-bg);color:var(--warning)}
   .badge-danger{background:var(--danger-bg);color:var(--danger)}
-  .badge-info{background:var(--info-bg);color:var(--info)}
   .badge-gray{background:var(--surface2);color:var(--text2)}
   .pts-pos{color:var(--success);font-weight:500;font-variant-numeric:tabular-nums}
   .pts-neg{color:var(--danger);font-weight:500;font-variant-numeric:tabular-nums}
@@ -378,10 +377,12 @@ function submitAccrue() {
     document.getElementById('ac-result').textContent = JSON.stringify(res, null, 2);
     var labelSuffix = payload.label ? ' [' + payload.label + ']' : '';
     showToast('Accrued ' + res.amount + ' points to ' + res.user_id + labelSuffix);
-    if (u === currentUser()) {
-      loadBalance();
-      loadLedger();
-    }
+    document.getElementById('user-id').value = u;
+    ['ac-user', 'hold-user', 'debit-user'].forEach(function(id) {
+      document.getElementById(id).value = u;
+    });
+    loadBalance();
+    loadLedger();
   }).catch(function(e) {
     document.getElementById('ac-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -478,8 +479,7 @@ function loadLots() {
 
 function loadLedger() {
   var u = currentUser();
-  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(page) {
-    var entries = (page && page.entries) ? page.entries : [];
+  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(entries) {
     var html = entries.map(function(e) {
       var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
       var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
