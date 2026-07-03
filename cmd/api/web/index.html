@@ -50,6 +50,7 @@
   .badge-warning{background:var(--warning-bg);color:var(--warning)}
   .badge-danger{background:var(--danger-bg);color:var(--danger)}
   .badge-gray{background:var(--surface2);color:var(--text2)}
+  .badge-info{background:var(--info-bg);color:var(--info)}
   .pts-pos{color:var(--success);font-weight:500;font-variant-numeric:tabular-nums}
   .pts-neg{color:var(--danger);font-weight:500;font-variant-numeric:tabular-nums}
   .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font)}
@@ -479,7 +480,8 @@ function loadLots() {
 
 function loadLedger() {
   var u = currentUser();
-  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(entries) {
+  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(res) {
+    var entries = (res && res.entries) ? res.entries : [];
     var html = entries.map(function(e) {
       var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
       var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
