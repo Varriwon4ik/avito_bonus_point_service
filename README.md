@@ -1,5 +1,7 @@
 # Bonus Points Ledger Service
 
+[![CI](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml/badge.svg)](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml)
+
 A REST-like service for managing an online store's bonus-points program,
 addressing the problems of the original prototype:
 
@@ -57,8 +59,22 @@ go run ./cmd/api
 
 Sanitized example environment values are available in [`.env.example`](./.env.example).
 
+## Deployment
+
+The current Sprint increment is deployed on the University VM and is reachable at
+`http://10.93.26.175:8080/` — serving the web UI, Swagger UI at `/docs`, and the
+API. The address is on the university private network, so access requires the
+university network/VPN; exact private access details for graders are provided
+through Moodle.
+
 ## Submissions
 
+- **Week 4 (Assignment 4, Sprint 2):** public report index at
+  [reports/week4/README.md](./reports/week4/README.md). Quality assets:
+  [docs/quality-requirements.md](./docs/quality-requirements.md),
+  [docs/quality-requirement-tests.md](./docs/quality-requirement-tests.md),
+  [docs/testing.md](./docs/testing.md), and
+  [docs/user-acceptance-tests.md](./docs/user-acceptance-tests.md).
 - **Week 3 (Assignment 3, MVP v1):** public report index at
   [reports/week3/README.md](./reports/week3/README.md). Current backlog registry:
   [docs/user-stories.md](./docs/user-stories.md). Release mapped to MVP v1:
@@ -151,8 +167,13 @@ Content-Type: application/json
 ### Lots and ledger (for the UI / debugging)
 ```http
 GET /v1/users/{id}/lots
-GET /v1/users/{id}/transactions?limit=100
+GET /v1/users/{id}/transactions?page=1&offset=20
+-> 200 { "user_id": "user_123", "page": 1, "offset": 20, "total": 42, "entries": [ ... ] }
 ```
+
+Transaction history is paginated (US-09): `page` is the 1-based page number
+(default 1) and `offset` is the page size (1–500, default 20). Invalid values
+return `400 Bad Request`.
 
 ## Observability
 
@@ -187,10 +208,31 @@ scraper). It exposes:
 Integration tests run against a real Postgres instance and cover
 idempotency, hold/confirm/cancel, malformed JSON, missing required fields,
 not-found handling, invalid amounts, invalid pagination, FIFO-by-expiry
-ordering, concurrent holds (race-safety), and OpenAPI route availability:
+ordering, concurrent holds (race-safety), and OpenAPI route availability.
+Automated **quality requirement tests** ([QRT-001/002/003](docs/quality-requirement-tests.md))
+verify balance-read latency, ledger integrity under concurrency, and per-module
+coverage:
 
 ```sh
 docker compose up -d postgres
 export TEST_DATABASE_URL="postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable"
-go test ./...
+
+go test ./... -race -count=1 -p 1 -coverpkg=./... -coverprofile=coverage.out
+go test ./internal/api/ -race -run 'TestQRT' -v   # quality requirement tests only
+bash scripts/coverage_gate.sh coverage.out         # per-module coverage gate (>=30%)
 ```
+
+Full testing status, critical modules, and coverage: [docs/testing.md](docs/testing.md).
+
+## Continuous integration
+
+Every push and every pull request to `main` is gated by the
+[CI workflow](.github/workflows/ci.yml) (US-14). On GitHub's hosted runners it
+spins up a Postgres service container (matching `docker-compose.yml`), pins the
+Go toolchain to the version declared in `go.mod`, and runs `go mod verify`,
+`gofmt`, `go vet`, `go build ./...`, the full test suite with the race detector,
+the automated quality requirement tests, a **per-module line-coverage gate**
+(≥30% for `internal/data` and `internal/api`), and **`govulncheck`** (dependency
+and standard-library vulnerability scan — the additional QA check). The default
+branch is protected by a ruleset requiring a pull request and passing status
+checks, so broken changes cannot be merged and `main` stays releasable.

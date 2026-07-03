@@ -59,6 +59,15 @@ type LedgerEntry struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// PaginatedLedger wraps a page of ledger entries with pagination metadata.
+type PaginatedLedger struct {
+	UserID  string        `json:"user_id"`
+	Page    int           `json:"page"`
+	Offset  int           `json:"offset"`
+	Total   int           `json:"total"`
+	Entries []LedgerEntry `json:"entries"`
+}
+
 // LotInfo describes a single batch of accrued points and its remaining balance.
 type LotInfo struct {
 	LotID     int64     `json:"lot_id"`
@@ -66,4 +75,17 @@ type LotInfo struct {
 	Remaining int       `json:"remaining"`
 	ExpiresAt time.Time `json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// AutotestScenario stores a reusable US-15 autotest definition in the DB.
+type AutotestScenario struct {
+	ID               int64     `json:"id"`
+	Label            string    `json:"label"`
+	UserID           string    `json:"user_id"`
+	Amount           int       `json:"amount"`
+	TTLDays          int       `json:"ttl_days"`
+	ParallelRequests int       `json:"parallel_requests"`
+	LedgerLabel      string    `json:"ledger_label"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }

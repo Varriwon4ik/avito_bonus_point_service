@@ -10,6 +10,12 @@ import (
 // days. If idempotencyKey has been used before for the "accrual" endpoint,
 // the original result is returned and no new points are created.
 func (s *Store) Accrue(ctx context.Context, userID string, amount, ttlDays int, idempotencyKey string) (int, []byte, error) {
+	return s.AccrueWithLabel(ctx, userID, amount, ttlDays, idempotencyKey, "")
+}
+
+// AccrueWithLabel stores the same accrual as Accrue, but annotates the ledger
+// entry with an optional label using the existing note column.
+func (s *Store) AccrueWithLabel(ctx context.Context, userID string, amount, ttlDays int, idempotencyKey, label string) (int, []byte, error) {
 	return s.withIdempotency(ctx, idempotencyKey, "accrual", func(tx *sql.Tx) (int, any, error) {
 		if amount <= 0 {
 			return 0, nil, ErrInvalidAmount
@@ -29,9 +35,14 @@ func (s *Store) Accrue(ctx context.Context, userID string, amount, ttlDays int, 
 			return 0, nil, err
 		}
 
+		var labelArg any
+		if label != "" {
+			labelArg = label
+		}
+
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id)
-			VALUES ($1, 'accrual', $2, 'lot', $3)`, userID, amount, lotID); err != nil {
+			INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id, note)
+			VALUES ($1, 'accrual', $2, 'lot', $3, $4)`, userID, amount, lotID, labelArg); err != nil {
 			return 0, nil, err
 		}
 
@@ -107,37 +118,45 @@ func (s *Store) ListLots(ctx context.Context, userID string) ([]LotInfo, error) 
 	return lots, rows.Err()
 }
 
-// ListLedger returns the most recent ledger entries for a user, newest first.
-func (s *Store) ListLedger(ctx context.Context, userID string, limit int) ([]LedgerEntry, error) {
-	if limit <= 0 || limit > 500 {
-		limit = 100
-	}
+// ListLedger returns a single page of ledger entries for a user, newest first.
+// page is 1-based; offset is the number of entries per page (1–500).
+func (s *Store) ListLedger(ctx context.Context, userID string, page, offset int) (PaginatedLedger, error) {
+	result := PaginatedLedger{UserID: userID, Page: page, Offset: offset}
 
 	exists, err := userExists(ctx, s.DB, userID)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	if !exists {
-		return nil, ErrUserNotFound
+		return result, ErrUserNotFound
 	}
 
+	// Count total entries for this user so callers can compute page counts.
+	if err := s.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM ledger_entries WHERE user_id = $1`, userID,
+	).Scan(&result.Total); err != nil {
+		return result, err
+	}
+
+	skip := (page - 1) * offset
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, user_id, type, amount, ref_type, ref_id, note, created_at FROM ledger_entries
+		SELECT id, user_id, type, amount, ref_type, ref_id, note, created_at
+		FROM ledger_entries
 		WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC
-		LIMIT $2`, userID, limit)
+		LIMIT $2 OFFSET $3`, userID, offset, skip)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	defer rows.Close()
 
-	entries := []LedgerEntry{}
+	result.Entries = []LedgerEntry{}
 	for rows.Next() {
 		var e LedgerEntry
 		if err := rows.Scan(&e.ID, &e.UserID, &e.Type, &e.Amount, &e.RefType, &e.RefID, &e.Note, &e.CreatedAt); err != nil {
-			return nil, err
+			return result, err
 		}
-		entries = append(entries, e)
+		result.Entries = append(result.Entries, e)
 	}
-	return entries, rows.Err()
+	return result, rows.Err()
 }

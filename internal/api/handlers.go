@@ -26,6 +26,7 @@ type accrueRequest struct {
 	Amount         *int    `json:"amount"`
 	TTLDays        *int    `json:"ttl_days,omitempty"`
 	IdempotencyKey *string `json:"idempotency_key"`
+	Label          *string `json:"label,omitempty"`
 }
 
 // handleAccrue implements "по каждому пользователю можно добавить бонусные
@@ -61,7 +62,12 @@ func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
 		ttl = *req.TTLDays
 	}
 
-	status, body, err := s.Store.Accrue(r.Context(), userID, *req.Amount, ttl, strings.TrimSpace(*req.IdempotencyKey))
+	label := ""
+	if req.Label != nil {
+		label = strings.TrimSpace(*req.Label)
+	}
+
+	status, body, err := s.Store.AccrueWithLabel(r.Context(), userID, *req.Amount, ttl, strings.TrimSpace(*req.IdempotencyKey), label)
 	s.respond(w, status, body, err)
 }
 
@@ -101,22 +107,32 @@ func (s *Server) handleListLots(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListLedger(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("id")
 
-	limit := 100
-	if v := r.URL.Query().Get("limit"); v != "" {
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
 		n, err := strconv.Atoi(v)
-		if err != nil || n <= 0 || n > 500 {
-			badRequest(w, "limit must be between 1 and 500")
+		if err != nil || n < 1 {
+			badRequest(w, "page must be a positive integer")
 			return
 		}
-		limit = n
+		page = n
 	}
 
-	entries, err := s.Store.ListLedger(r.Context(), userID, limit)
+	offset := 20
+	if v := r.URL.Query().Get("offset"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 500 {
+			badRequest(w, "offset must be between 1 and 500")
+			return
+		}
+		offset = n
+	}
+
+	result, err := s.Store.ListLedger(r.Context(), userID, page, offset)
 	if err != nil {
 		s.respond(w, 0, nil, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, entries)
+	writeJSON(w, http.StatusOK, result)
 }
 
 type amountRequest struct {
