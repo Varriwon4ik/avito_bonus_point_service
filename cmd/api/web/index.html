@@ -49,6 +49,7 @@
   .badge-success{background:var(--success-bg);color:var(--success)}
   .badge-warning{background:var(--warning-bg);color:var(--warning)}
   .badge-danger{background:var(--danger-bg);color:var(--danger)}
+  .badge-info{background:var(--info-bg);color:var(--info)}
   .badge-gray{background:var(--surface2);color:var(--text2)}
   .pts-pos{color:var(--success);font-weight:500;font-variant-numeric:tabular-nums}
   .pts-neg{color:var(--danger);font-weight:500;font-variant-numeric:tabular-nums}
@@ -71,6 +72,11 @@
   .toast.show{opacity:1;transform:translateY(0)}
   .toast.error{background:var(--danger)}
   .meta-block{background:var(--surface2);border-radius:var(--radius);padding:12px;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--text2);white-space:pre-wrap;word-break:break-word}
+  .http-status{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;font-family:var(--mono);font-size:12px;font-weight:500}
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .status-2xx{color:var(--success)}.status-2xx .status-dot{background:var(--success)}
+  .status-4xx{color:var(--danger)}.status-4xx .status-dot{background:var(--danger)}
+  .status-5xx{color:var(--warning)}.status-5xx .status-dot{background:var(--warning)}
   @media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -160,7 +166,7 @@
       </div>
       <div class="card">
         <div class="card-header">Last response</div>
-        <div class="card-body"><pre class="meta-block" id="ac-result">-</pre></div>
+        <div class="card-body"><div id="ac-status"></div><pre class="meta-block" id="ac-result">-</pre></div>
       </div>
     </div>
 
@@ -224,7 +230,7 @@
 
       <div class="card">
         <div class="card-header">Last response</div>
-        <div class="card-body"><pre class="meta-block" id="hold-result">-</pre></div>
+        <div class="card-body"><div id="hold-status"></div><pre class="meta-block" id="hold-result">-</pre></div>
       </div>
     </div>
 
@@ -250,7 +256,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Created</th></tr></thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Label</th><th>Created</th></tr></thead>
           <tbody id="ledger-tbody"></tbody>
         </table>
       </div>
@@ -297,20 +303,28 @@ function api(path, opts) {
     return res.text().then(function(text) {
       var body = null;
       try { body = text ? JSON.parse(text) : null; } catch (e) {}
-      if (!res.ok) {
-        var msg = (body && (body.message || body.error)) ? (body.message || body.error) : ('HTTP ' + res.status);
-        throw new Error(msg);
-      }
-      return body;
+      return { status: res.status, ok: res.ok, body: body };
     });
   });
+}
+
+function showStatus(containerId, status) {
+  var cls = status >= 500 ? 'status-5xx' : (status >= 400 ? 'status-4xx' : 'status-2xx');
+  var texts = {2: 'Success', 4: 'Client Error', 5: 'Server Error'};
+  var label = texts[Math.floor(status / 100)] || 'Unknown';
+  document.getElementById(containerId).innerHTML =
+    '<div class="http-status ' + cls + '">' +
+    '<span class="status-dot"></span>HTTP ' + status + ' — ' + label +
+    '</div>';
 }
 
 function loadBalance() {
   var u = currentUser();
   var days = document.getElementById('expiring-days').value || 7;
   var url = '/v1/users/' + encodeURIComponent(u) + '/balance?expiring_within_days=' + encodeURIComponent(days);
-  api(url).then(function(b) {
+  api(url).then(function(r) {
+    if (!r.ok) { showToast('Failed to load balance: HTTP ' + r.status, true); return; }
+    var b = r.body;
     document.getElementById('d-available').textContent = b.available.toLocaleString();
     document.getElementById('d-held').textContent = b.held.toLocaleString();
     document.getElementById('d-total').textContent = b.total.toLocaleString();
@@ -332,10 +346,16 @@ function submitAccrue() {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload)
-  }).then(function(res) {
-    document.getElementById('ac-result').textContent = JSON.stringify(res, null, 2);
-    showToast('Accrued ' + res.amount + ' points to ' + res.user_id);
-    if (u === currentUser()) loadBalance();
+  }).then(function(r) {
+    showStatus('ac-status', r.status);
+    document.getElementById('ac-result').textContent = JSON.stringify(r.body, null, 2);
+    if (r.ok) {
+      showToast('Accrued ' + r.body.amount + ' points to ' + r.body.user_id);
+      if (u === currentUser()) loadBalance();
+    } else {
+      var msg = (r.body && (r.body.message || r.body.error)) || ('HTTP ' + r.status);
+      showToast(msg, true);
+    }
   }).catch(function(e) {
     document.getElementById('ac-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -351,11 +371,17 @@ function submitHold() {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({amount: amount, idempotency_key: idem})
-  }).then(function(res) {
-    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
-    document.getElementById('hold-id').value = res.hold_id;
-    showToast('Hold #' + res.hold_id + ' created (' + res.amount + ' pts)');
-    if (u === currentUser()) loadBalance();
+  }).then(function(r) {
+    showStatus('hold-status', r.status);
+    document.getElementById('hold-result').textContent = JSON.stringify(r.body, null, 2);
+    if (r.ok) {
+      document.getElementById('hold-id').value = r.body.hold_id;
+      showToast('Hold #' + r.body.hold_id + ' created (' + r.body.amount + ' pts)');
+      if (u === currentUser()) loadBalance();
+    } else {
+      var msg = (r.body && (r.body.message || r.body.error)) || ('HTTP ' + r.status);
+      showToast(msg, true);
+    }
   }).catch(function(e) {
     document.getElementById('hold-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -365,10 +391,16 @@ function submitHold() {
 function confirmHold() {
   var id = parseInt(document.getElementById('hold-id').value, 10);
   if (!id) { showToast('Enter a hold id', true); return; }
-  api('/v1/holds/' + id + '/confirm', {method: 'POST'}).then(function(res) {
-    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
-    showToast('Hold #' + id + ' confirmed');
-    loadBalance();
+  api('/v1/holds/' + id + '/confirm', {method: 'POST'}).then(function(r) {
+    showStatus('hold-status', r.status);
+    document.getElementById('hold-result').textContent = JSON.stringify(r.body, null, 2);
+    if (r.ok) {
+      showToast('Hold #' + id + ' confirmed');
+      loadBalance();
+    } else {
+      var msg = (r.body && (r.body.message || r.body.error)) || ('HTTP ' + r.status);
+      showToast(msg, true);
+    }
   }).catch(function(e) {
     document.getElementById('hold-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -378,10 +410,16 @@ function confirmHold() {
 function cancelHold() {
   var id = parseInt(document.getElementById('hold-id').value, 10);
   if (!id) { showToast('Enter a hold id', true); return; }
-  api('/v1/holds/' + id + '/cancel', {method: 'POST'}).then(function(res) {
-    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
-    showToast('Hold #' + id + ' cancelled, points released');
-    loadBalance();
+  api('/v1/holds/' + id + '/cancel', {method: 'POST'}).then(function(r) {
+    showStatus('hold-status', r.status);
+    document.getElementById('hold-result').textContent = JSON.stringify(r.body, null, 2);
+    if (r.ok) {
+      showToast('Hold #' + id + ' cancelled, points released');
+      loadBalance();
+    } else {
+      var msg = (r.body && (r.body.message || r.body.error)) || ('HTTP ' + r.status);
+      showToast(msg, true);
+    }
   }).catch(function(e) {
     document.getElementById('hold-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -397,10 +435,16 @@ function submitDebit() {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({amount: amount, idempotency_key: idem})
-  }).then(function(res) {
-    document.getElementById('hold-result').textContent = JSON.stringify(res, null, 2);
-    showToast('Debited ' + res.amount + ' points from ' + res.user_id);
-    if (u === currentUser()) loadBalance();
+  }).then(function(r) {
+    showStatus('hold-status', r.status);
+    document.getElementById('hold-result').textContent = JSON.stringify(r.body, null, 2);
+    if (r.ok) {
+      showToast('Debited ' + r.body.amount + ' points from ' + r.body.user_id);
+      if (u === currentUser()) loadBalance();
+    } else {
+      var msg = (r.body && (r.body.message || r.body.error)) || ('HTTP ' + r.status);
+      showToast(msg, true);
+    }
   }).catch(function(e) {
     document.getElementById('hold-result').textContent = 'Error: ' + e.message;
     showToast(e.message, true);
@@ -409,7 +453,9 @@ function submitDebit() {
 
 function loadLots() {
   var u = currentUser();
-  api('/v1/users/' + encodeURIComponent(u) + '/lots').then(function(lots) {
+  api('/v1/users/' + encodeURIComponent(u) + '/lots').then(function(r) {
+    if (!r.ok) { showToast('Failed to load lots: HTTP ' + r.status, true); return; }
+    var lots = r.body || [];
     var now = new Date();
     var html = lots.map(function(l) {
       var exp = new Date(l.expires_at);
@@ -432,19 +478,23 @@ function loadLots() {
 
 function loadLedger() {
   var u = currentUser();
-  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(entries) {
+  api('/v1/users/' + encodeURIComponent(u) + '/transactions').then(function(r) {
+    if (!r.ok) { showToast('Failed to load transactions: HTTP ' + r.status, true); return; }
+    var entries = (r.body && r.body.entries) ? r.body.entries : [];
     var html = entries.map(function(e) {
       var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
       var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
+      var note = e.note ? '<span class="badge ' + (e.note === 'test' ? 'badge-info' : 'badge-gray') + '">' + e.note + '</span>' : '-';
       return '<tr>' +
         '<td class="td-id">#' + e.id + '</td>' +
         '<td>' + e.type + '</td>' +
         '<td class="' + cls + '">' + (e.amount > 0 ? '+' : '') + e.amount + '</td>' +
         '<td style="color:var(--text2)">' + ref + '</td>' +
+        '<td>' + note + '</td>' +
         '<td style="color:var(--text2)">' + new Date(e.created_at).toLocaleString() + '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
+    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
   }).catch(function(e) {
     showToast('Failed to load transactions: ' + e.message, true);
   });
