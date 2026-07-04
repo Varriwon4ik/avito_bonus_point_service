@@ -61,7 +61,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	store := data.NewStore(db)
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	handler := api.NewAppHandler(api.NewServer(store, logger, 365), nil, spec)
+	handler := api.NewAppHandler(api.NewServer(store, logger, 365, 1, 1825), nil, spec)
 
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)

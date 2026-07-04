@@ -54,13 +54,10 @@ func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ttl := s.DefaultTTLDays
-	if req.TTLDays != nil {
-		if *req.TTLDays <= 0 {
-			badRequest(w, "ttl_days must be a positive integer")
-			return
-		}
-		ttl = *req.TTLDays
+	ttl, err := s.resolveTTLDays(req.TTLDays)
+	if err != nil {
+		badRequest(w, err.Error())
+		return
 	}
 
 	label := ""

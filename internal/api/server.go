@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,20 +17,44 @@ type Server struct {
 	Store          *data.Store
 	Logger         *slog.Logger
 	DefaultTTLDays int
+	MinTTLDays     int
+	MaxTTLDays     int
 	Mux            *http.ServeMux
 	Metrics        *Metrics
 }
 
-func NewServer(store *data.Store, logger *slog.Logger, defaultTTLDays int) *Server {
+func NewServer(store *data.Store, logger *slog.Logger, defaultTTLDays, minTTLDays, maxTTLDays int) *Server {
+	if minTTLDays <= 0 {
+		minTTLDays = 1
+	}
+	if maxTTLDays <= 0 {
+		maxTTLDays = 1825
+	}
+	if maxTTLDays < minTTLDays {
+		maxTTLDays = minTTLDays
+	}
+
 	s := &Server{
 		Store:          store,
 		Logger:         logger,
 		DefaultTTLDays: defaultTTLDays,
+		MinTTLDays:     minTTLDays,
+		MaxTTLDays:     maxTTLDays,
 		Mux:            http.NewServeMux(),
 		Metrics:        NewMetrics(),
 	}
 	s.routes()
 	return s
+}
+
+func (s *Server) resolveTTLDays(ttlDays *int) (int, error) {
+	if ttlDays == nil {
+		return s.DefaultTTLDays, nil
+	}
+	if *ttlDays < s.MinTTLDays || *ttlDays > s.MaxTTLDays {
+		return 0, fmt.Errorf("ttl_days must be between %d and %d days", s.MinTTLDays, s.MaxTTLDays)
+	}
+	return *ttlDays, nil
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
