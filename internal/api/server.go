@@ -145,14 +145,11 @@ func explainJSONError(err error) error {
 // respond maps a Store result/error pair to an HTTP response.
 func (s *Server) respond(w http.ResponseWriter, status int, body []byte, err error) {
 	if err != nil {
-		var invalidLabelErr *data.InvalidLabelError
 		switch {
 		case errors.Is(err, data.ErrInsufficientFunds):
 			conflict(w, err.Error())
 		case errors.Is(err, data.ErrInvalidAmount):
 			badRequest(w, err.Error())
-		case errors.As(err, &invalidLabelErr):
-			badRequest(w, invalidLabelErr.Error())
 		case errors.Is(err, data.ErrUserNotFound):
 			notFound(w, err.Error())
 		case errors.Is(err, data.ErrHoldNotFound):
