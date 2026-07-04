@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Web autotester tab and run endpoint (US-17).** A new "Autotester" tab in the
+  web UI lets an administrator fill in a scenario (label, test user, amount, TTL,
+  parallel requests) and run it against the live instance, then see a per-check
+  pass/fail report. It is backed by a new `POST /v1/autotest/run` endpoint and a
+  shared `internal/autotest` engine extracted from the `cmd/autotest` console
+  tool, so the web and console front ends run identical accrual-correctness and
+  parallel-request checks. All requests target a dedicated `autotest-`-prefixed
+  user so real accounts are never touched. (#40)
+
 ## [1.1.0] - 2026-06-28
 
 Sprint 2 increment (Assignment 4, 22–28 Jun 2026). Maps to the

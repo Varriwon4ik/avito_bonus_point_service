@@ -18,6 +18,7 @@ tags:
   - name: Debits
   - name: Lots
   - name: Transactions
+  - name: Autotest
 paths:
   /healthz:
     get:
@@ -372,6 +373,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /v1/autotest/run:
+    post:
+      tags: [Autotest]
+      summary: Run the built-in accrual autotester (US-15/US-17)
+      description: |
+        Runs the shared autotester engine against this live instance and returns
+        a per-check pass/fail report. It exercises accrual correctness and a burst
+        of parallel accrual requests, asserting each produces a distinct lot with a
+        consistent balance and ledger. All requests target a dedicated
+        `autotest-`-prefixed test user, so real accounts are never touched. This
+        backs the web "Autotester" tab and mirrors the `cmd/autotest` console tool.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutotestRunRequest'
+      responses:
+        '200':
+          description: The autotester ran; inspect `passed` and per-check `results`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutotestRunResult'
+        '400':
+          description: Malformed JSON, missing amount, or an invalid scenario value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: The target instance was unreachable or an internal error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   parameters:
     UserId:
@@ -551,6 +588,85 @@ components:
         created_at:
           type: string
           format: date-time
+    AutotestRunRequest:
+      type: object
+      required: [amount]
+      additionalProperties: false
+      properties:
+        label:
+          type: string
+          description: Scenario label; free text is slugified. Defaults to `demo`.
+          example: demo
+        user_id:
+          type: string
+          description: >
+            Test user; an `autotest-` prefix is enforced and the value is slugified.
+            Defaults to `autotest-demo-user`.
+          example: demo-user
+        amount:
+          type: integer
+          minimum: 1
+          example: 100
+        ttl_days:
+          type: integer
+          minimum: 1
+          description: Optional accrual lifetime; defaults to the server's configured TTL.
+          example: 365
+        parallel_requests:
+          type: integer
+          minimum: 2
+          description: Number of simultaneous accruals for the parallel check. Defaults to 5.
+          example: 5
+    AutotestCheckResult:
+      type: object
+      required: [name, passed]
+      properties:
+        name:
+          type: string
+          example: parallel accrual
+        passed:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Failure detail; omitted when the check passed.
+          example: parallel request 3 reused lot id 41
+    AutotestRunResult:
+      type: object
+      required: [scenario, passed, results]
+      properties:
+        scenario:
+          $ref: '#/components/schemas/AutotestScenario'
+        passed:
+          type: boolean
+          description: True only when every check passed.
+          example: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutotestCheckResult'
+    AutotestScenario:
+      type: object
+      required: [label, user_id, amount, ttl_days, parallel_requests, ledger_label]
+      properties:
+        label:
+          type: string
+          example: demo
+        user_id:
+          type: string
+          example: autotest-demo-user
+        amount:
+          type: integer
+          example: 100
+        ttl_days:
+          type: integer
+          example: 365
+        parallel_requests:
+          type: integer
+          example: 5
+        ledger_label:
+          type: string
+          example: test
     ErrorResponse:
       type: object
       required: [error, message]

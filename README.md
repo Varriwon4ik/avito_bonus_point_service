@@ -175,6 +175,32 @@ Transaction history is paginated (US-09): `page` is the 1-based page number
 (default 1) and `offset` is the page size (1–500, default 20). Invalid values
 return `400 Bad Request`.
 
+### Autotester (US-15 / US-17)
+```http
+POST /v1/autotest/run
+Content-Type: application/json
+
+{ "label": "demo", "user_id": "demo-user", "amount": 100, "parallel_requests": 5 }
+-> 200 {
+     "scenario": { "label": "demo", "user_id": "autotest-demo-user", "amount": 100,
+                   "ttl_days": 365, "parallel_requests": 5, "ledger_label": "test" },
+     "passed": true,
+     "results": [
+       { "name": "accrual correctness", "passed": true },
+       { "name": "parallel accrual", "passed": true }
+     ]
+   }
+```
+
+Runs the built-in autotester against the live instance and returns a per-check
+pass/fail report. It verifies accrual correctness and that a burst of parallel
+accrual requests each produce a distinct lot with a consistent balance and
+ledger. Only `amount` is required; `ttl_days` defaults to the server's configured
+TTL and `parallel_requests` defaults to 5. The `user_id` is always forced under an
+`autotest-` prefix so real accounts are never touched. This backs the **Autotester**
+tab in the web UI and shares the `internal/autotest` engine with the `cmd/autotest`
+console tool.
+
 ## Observability
 
 Every request passes through a logging/metrics middleware that never reads or
