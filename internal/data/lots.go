@@ -13,9 +13,14 @@ func (s *Store) Accrue(ctx context.Context, userID string, amount, ttlDays int, 
 	return s.AccrueWithLabel(ctx, userID, amount, ttlDays, idempotencyKey, "")
 }
 
-// AccrueWithLabel stores the same accrual as Accrue, but annotates the ledger
-// entry with an optional label using the existing note column.
+// AccrueWithLabel stores the same accrual as Accrue, but attaches an optional
+// user-facing label to the resulting ledger entry.
 func (s *Store) AccrueWithLabel(ctx context.Context, userID string, amount, ttlDays int, idempotencyKey, label string) (int, []byte, error) {
+	normalizedLabel, err := NormalizeTransactionLabel(label)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	return s.withIdempotency(ctx, idempotencyKey, "accrual", func(tx *sql.Tx) (int, any, error) {
 		if amount <= 0 {
 			return 0, nil, ErrInvalidAmount
@@ -27,7 +32,7 @@ func (s *Store) AccrueWithLabel(ctx context.Context, userID string, amount, ttlD
 		expiresAt := time.Now().UTC().AddDate(0, 0, ttlDays)
 
 		var lotID int64
-		err := tx.QueryRowContext(ctx, `
+		err = tx.QueryRowContext(ctx, `
 			INSERT INTO points_lots (user_id, amount, remaining, expires_at)
 			VALUES ($1, $2, $2, $3)
 			RETURNING id`, userID, amount, expiresAt).Scan(&lotID)
@@ -36,12 +41,12 @@ func (s *Store) AccrueWithLabel(ctx context.Context, userID string, amount, ttlD
 		}
 
 		var labelArg any
-		if label != "" {
-			labelArg = label
+		if normalizedLabel != "" {
+			labelArg = normalizedLabel
 		}
 
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id, note)
+			INSERT INTO ledger_entries (user_id, type, amount, ref_type, ref_id, label)
 			VALUES ($1, 'accrual', $2, 'lot', $3, $4)`, userID, amount, lotID, labelArg); err != nil {
 			return 0, nil, err
 		}
@@ -140,7 +145,7 @@ func (s *Store) ListLedger(ctx context.Context, userID string, page, offset int)
 
 	skip := (page - 1) * offset
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, user_id, type, amount, ref_type, ref_id, note, created_at
+		SELECT id, user_id, type, amount, ref_type, ref_id, label, note, created_at
 		FROM ledger_entries
 		WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC
@@ -153,7 +158,7 @@ func (s *Store) ListLedger(ctx context.Context, userID string, page, offset int)
 	result.Entries = []LedgerEntry{}
 	for rows.Next() {
 		var e LedgerEntry
-		if err := rows.Scan(&e.ID, &e.UserID, &e.Type, &e.Amount, &e.RefType, &e.RefID, &e.Note, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.UserID, &e.Type, &e.Amount, &e.RefType, &e.RefID, &e.Label, &e.Note, &e.CreatedAt); err != nil {
 			return result, err
 		}
 		result.Entries = append(result.Entries, e)

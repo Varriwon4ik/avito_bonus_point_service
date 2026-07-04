@@ -15,6 +15,7 @@ func (s *Server) routes() {
 	s.Mux.HandleFunc("POST /v1/users/{id}/debits", s.handleDebit)
 	s.Mux.HandleFunc("POST /v1/holds/{id}/confirm", s.handleConfirmHold)
 	s.Mux.HandleFunc("POST /v1/holds/{id}/cancel", s.handleCancelHold)
+	s.Mux.HandleFunc("POST /v1/autotest/run", s.handleAutotestRun)
 	s.Mux.HandleFunc("GET /healthz", s.handleHealthz)
 }
 
