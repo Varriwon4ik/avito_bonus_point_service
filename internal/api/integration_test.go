@@ -61,7 +61,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	store := data.NewStore(db)
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	handler := api.NewAppHandler(api.NewServer(store, logger, 365), nil, spec)
+	handler := api.NewAppHandler(api.NewServer(store, logger, 365, 1, 1825), nil, spec)
 
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
@@ -168,6 +168,37 @@ func mustAccrue(t *testing.T, env *testEnv, user string, amount, ttlDays int, id
 	assertJSONContentType(t, header)
 }
 
+func ledgerEntries(t *testing.T, env *testEnv, user string) []any {
+	t.Helper()
+
+	status, header, ledger := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/transactions?page=1&offset=20", nil)
+	if status != http.StatusOK {
+		t.Fatalf("transactions: status=%d body=%v", status, ledger)
+	}
+	assertJSONContentType(t, header)
+
+	entries, ok := ledger["entries"].([]any)
+	if !ok {
+		t.Fatalf("unexpected ledger entries payload: %T", ledger["entries"])
+	}
+	return entries
+}
+
+func firstLedgerEntry(t *testing.T, env *testEnv, user string) map[string]any {
+	t.Helper()
+
+	entries := ledgerEntries(t, env, user)
+	if len(entries) == 0 {
+		t.Fatalf("expected at least one ledger entry")
+	}
+
+	first, ok := entries[0].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected ledger entry payload: %T", entries[0])
+	}
+	return first
+}
+
 func TestAccrualIdempotency(t *testing.T) {
 	env := newTestEnv(t)
 	user := "user_accrual"
@@ -200,7 +231,7 @@ func TestAccrualIdempotency(t *testing.T) {
 	}
 }
 
-func TestAccrualLabelIsStoredInLedger(t *testing.T) {
+func TestAccrualPredefinedLabelIsStoredInLedger(t *testing.T) {
 	env := newTestEnv(t)
 	user := "user_labelled"
 
@@ -215,23 +246,126 @@ func TestAccrualLabelIsStoredInLedger(t *testing.T) {
 	}
 	assertJSONContentType(t, header)
 
-	status, header, ledger := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+user+"/transactions?page=1&offset=20", nil)
-	if status != http.StatusOK {
-		t.Fatalf("transactions: status=%d body=%v", status, ledger)
+	first := firstLedgerEntry(t, env, user)
+	if first["label"] != "test" {
+		t.Fatalf("expected ledger label=test, got %v", first["label"])
+	}
+	if note, ok := first["note"]; ok && note != nil {
+		t.Fatalf("expected note to stay empty for labelled accrual, got %v", note)
+	}
+}
+
+func TestAccrualCustomLabelIsTrimmedAndStoredInLedger(t *testing.T) {
+	env := newTestEnv(t)
+	user := "user_custom_label"
+
+	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", map[string]any{
+		"amount":          125,
+		"ttl_days":        30,
+		"idempotency_key": "order-custom-label",
+		"label":           "  qa-run / sprint-2  ",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("custom labelled accrual: status=%d body=%v", status, body)
 	}
 	assertJSONContentType(t, header)
 
-	entries, ok := ledger["entries"].([]any)
-	if !ok || len(entries) == 0 {
-		t.Fatalf("expected at least one ledger entry, got %v", ledger["entries"])
+	first := firstLedgerEntry(t, env, user)
+	if first["label"] != "qa-run / sprint-2" {
+		t.Fatalf("expected trimmed custom label, got %v", first["label"])
+	}
+}
+
+func TestAccrualWithoutLabelStillWorks(t *testing.T) {
+	env := newTestEnv(t)
+	user := "user_without_label"
+
+	mustAccrue(t, env, user, 80, 30, "order-no-label")
+
+	first := firstLedgerEntry(t, env, user)
+	if _, ok := first["label"]; ok {
+		t.Fatalf("expected label to be omitted for unlabelled accrual, got %v", first["label"])
+	}
+}
+
+func TestInvalidAccrualLabelReturnsBadRequest(t *testing.T) {
+	cases := []struct {
+		name        string
+		label       string
+		wantMessage string
+	}{
+		{
+			name:        "too long",
+			label:       strings.Repeat("a", data.TransactionLabelMaxLength+1),
+			wantMessage: "label must be at most 32 characters",
+		},
+		{
+			name:        "control characters",
+			label:       "qa\nrun",
+			wantMessage: "label must not contain control characters",
+		},
+		{
+			name:        "unsupported characters",
+			label:       "<script>",
+			wantMessage: "label contains unsupported characters; use letters, numbers, spaces, '.', '-', '_', '/', or ':'",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := newTestEnv(t)
+
+			status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/user_bad_label/accruals",
+				map[string]any{
+					"amount":          100,
+					"ttl_days":        30,
+					"idempotency_key": "order-bad-label-" + tc.name,
+					"label":           tc.label,
+				},
+			)
+			assertErrorResponse(t, status, header, body, http.StatusBadRequest, "bad_request", tc.wantMessage)
+		})
+	}
+}
+
+func TestAccrualLabelIdempotencyIsDeterministic(t *testing.T) {
+	env := newTestEnv(t)
+	user := "user_idem_label"
+
+	payload := map[string]any{
+		"amount":          100,
+		"ttl_days":        30,
+		"idempotency_key": "order-idem-label",
+		"label":           "test",
+	}
+	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", payload)
+	if status != http.StatusCreated {
+		t.Fatalf("first accrual: status=%d body=%v", status, body)
+	}
+	assertJSONContentType(t, header)
+
+	status, header, replay := doJSON(t, http.MethodPost, env.Server.URL+"/v1/users/"+user+"/accruals", map[string]any{
+		"amount":          100,
+		"ttl_days":        30,
+		"idempotency_key": "order-idem-label",
+		"label":           "real",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("replayed accrual: status=%d body=%v", status, replay)
+	}
+	assertJSONContentType(t, header)
+
+	entries := ledgerEntries(t, env, user)
+	if len(entries) != 1 {
+		t.Fatalf("expected exactly one ledger entry after idempotent replay, got %d", len(entries))
 	}
 
 	first, ok := entries[0].(map[string]any)
 	if !ok {
 		t.Fatalf("unexpected ledger entry payload: %T", entries[0])
 	}
-	if first["note"] != "test" {
-		t.Fatalf("expected ledger note=test, got %v", first["note"])
+	if first["label"] != "test" {
+		t.Fatalf("expected first label to be preserved after replay, got %v", first["label"])
 	}
 }
 

@@ -15,6 +15,7 @@ func (s *Server) routes() {
 	s.Mux.HandleFunc("POST /v1/users/{id}/debits", s.handleDebit)
 	s.Mux.HandleFunc("POST /v1/holds/{id}/confirm", s.handleConfirmHold)
 	s.Mux.HandleFunc("POST /v1/holds/{id}/cancel", s.handleCancelHold)
+	s.Mux.HandleFunc("POST /v1/autotest/run", s.handleAutotestRun)
 	s.Mux.HandleFunc("GET /healthz", s.handleHealthz)
 }
 
@@ -53,13 +54,10 @@ func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ttl := s.DefaultTTLDays
-	if req.TTLDays != nil {
-		if *req.TTLDays <= 0 {
-			badRequest(w, "ttl_days must be a positive integer")
-			return
-		}
-		ttl = *req.TTLDays
+	ttl, err := s.resolveTTLDays(req.TTLDays)
+	if err != nil {
+		badRequest(w, err.Error())
+		return
 	}
 
 	label := ""

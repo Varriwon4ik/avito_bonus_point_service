@@ -51,6 +51,7 @@
   .badge-danger{background:var(--danger-bg);color:var(--danger)}
   .badge-info{background:var(--info-bg);color:var(--info)}
   .badge-gray{background:var(--surface2);color:var(--text2)}
+  .badge-info{background:var(--info-bg);color:var(--info)}
   .pts-pos{color:var(--success);font-weight:500;font-variant-numeric:tabular-nums}
   .pts-neg{color:var(--danger);font-weight:500;font-variant-numeric:tabular-nums}
   .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font)}
@@ -64,6 +65,7 @@
   .input:focus{border-color:var(--accent)}
   .form-row{margin-bottom:14px}
   .form-label{font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+  .form-help{font-size:11.5px;color:var(--text3);margin-top:6px}
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .balance-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;margin-bottom:24px;display:flex;gap:32px;align-items:center;flex-wrap:wrap}
   .balance-pts{font-size:32px;font-weight:700;letter-spacing:-0.04em}
@@ -97,6 +99,7 @@
     <button class="nav-item" onclick="nav('holds')" id="nav-holds">Holds &amp; Debit</button>
     <button class="nav-item" onclick="nav('lots')" id="nav-lots">Lots &amp; Expiry</button>
     <button class="nav-item" onclick="nav('ledger')" id="nav-ledger">Transactions</button>
+    <button class="nav-item" onclick="nav('autotester')" id="nav-autotester">Autotester</button>
   </nav>
 
   <main class="main">
@@ -159,6 +162,21 @@
             <div class="form-row">
               <div class="form-label">Idempotency key <span style="color:var(--text3);font-weight:400">(prevents duplicate accruals)</span></div>
               <input class="input" id="ac-idem" placeholder="e.g. order_12345" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Transaction label (optional)</div>
+              <select class="input" id="ac-label-mode" style="width:100%" onchange="onAccrueLabelModeChanged()">
+                <option value="">No label</option>
+                <option value="test">test</option>
+                <option value="real">real</option>
+                <option value="custom">Custom label</option>
+              </select>
+              <div class="form-help">Use quick labels for test/real transactions or add your own custom label.</div>
+            </div>
+            <div class="form-row">
+              <div class="form-label">Custom label</div>
+              <input class="input" id="ac-custom-label" maxlength="32" placeholder="e.g. qa-run" style="width:100%" disabled>
+              <div class="form-help">Custom labels are trimmed and limited to 32 characters.</div>
             </div>
           </div>
           <button class="btn btn-primary" onclick="submitAccrue()">Accrue points</button>
@@ -256,9 +274,64 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Label</th><th>Created</th></tr></thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Ref</th><th>Label</th><th>Note</th><th>Created</th></tr></thead>
           <tbody id="ledger-tbody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Autotester -->
+    <div class="page" id="page-autotester">
+      <div class="page-header"><div class="page-title">Autotester</div></div>
+      <div class="card">
+        <div class="card-body">
+          <p style="color:var(--text2);margin-bottom:16px">
+            Runs the built-in accrual autotester against this live instance — the same checks as the
+            <code style="font-family:var(--mono)">cmd/autotest</code> console tool. It verifies accrual correctness and,
+            crucially, that a burst of parallel accrual requests each produce a distinct lot with a consistent balance
+            and ledger. All requests use a dedicated <code style="font-family:var(--mono)">autotest-</code> test user, so
+            your real accounts are never touched.
+          </p>
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="form-label">Scenario label</div>
+              <input class="input" id="at-label" value="demo" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Test user (an <code style="font-family:var(--mono)">autotest-</code> prefix is enforced)</div>
+              <input class="input" id="at-user" value="demo-user" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Accrual amount</div>
+              <input class="input" id="at-amount" type="number" value="100" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Lifetime in days (optional)</div>
+              <input class="input" id="at-ttl" type="number" placeholder="default from server config" style="width:100%">
+            </div>
+            <div class="form-row">
+              <div class="form-label">Parallel requests (min 2)</div>
+              <input class="input" id="at-parallel" type="number" value="5" style="width:100%">
+            </div>
+          </div>
+          <button class="btn btn-primary" id="at-run-btn" onclick="runAutotest()">Run autotester</button>
+        </div>
+      </div>
+
+      <div class="card" id="at-summary-card" style="display:none">
+        <div class="card-header">Result</div>
+        <div class="card-body">
+          <div id="at-verdict" style="font-size:16px;font-weight:600;margin-bottom:14px"></div>
+          <table>
+            <thead><tr><th>Check</th><th>Status</th><th>Details</th></tr></thead>
+            <tbody id="at-results-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Raw response</div>
+        <div class="card-body"><pre class="meta-block" id="at-result">-</pre></div>
       </div>
     </div>
 
@@ -282,6 +355,60 @@ function nav(page) {
   if (page === 'ledger') loadLedger();
 }
 
+function runAutotest() {
+  var payload = {
+    label: document.getElementById('at-label').value.trim(),
+    user_id: document.getElementById('at-user').value.trim(),
+    amount: parseInt(document.getElementById('at-amount').value, 10),
+    parallel_requests: parseInt(document.getElementById('at-parallel').value, 10)
+  };
+  if (!payload.amount || payload.amount <= 0) { showToast('Enter a positive amount', true); return; }
+  if (!payload.parallel_requests || payload.parallel_requests < 2) { showToast('Parallel requests must be at least 2', true); return; }
+  var ttl = document.getElementById('at-ttl').value;
+  if (ttl) payload.ttl_days = parseInt(ttl, 10);
+
+  var btn = document.getElementById('at-run-btn');
+  btn.disabled = true;
+  var prevLabel = btn.textContent;
+  btn.textContent = 'Running…';
+
+  api('/v1/autotest/run', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(function(res) {
+    document.getElementById('at-result').textContent = JSON.stringify(res, null, 2);
+    document.getElementById('at-summary-card').style.display = '';
+    var verdict = document.getElementById('at-verdict');
+    verdict.textContent = res.passed ? '✓ All checks passed' : '✗ Some checks failed';
+    verdict.style.color = res.passed ? 'var(--success)' : 'var(--danger)';
+    var rows = (res.results || []).map(function(c) {
+      var badge = c.passed
+        ? '<span class="badge badge-success">passed</span>'
+        : '<span class="badge badge-danger">failed</span>';
+      return '<tr>' +
+        '<td>' + c.name + '</td>' +
+        '<td>' + badge + '</td>' +
+        '<td style="color:var(--text2)">' + (c.message ? escapeHtml(c.message) : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+    document.getElementById('at-results-tbody').innerHTML = rows;
+    showToast(res.passed ? 'Autotester passed for user ' + res.scenario.user_id : 'Autotester found issues', !res.passed);
+  }).catch(function(e) {
+    document.getElementById('at-result').textContent = 'Error: ' + e.message;
+    showToast(e.message, true);
+  }).then(function() {
+    btn.disabled = false;
+    btn.textContent = prevLabel;
+  });
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function onUserChanged() {
   var u = currentUser();
   ['ac-user', 'hold-user', 'debit-user'].forEach(function(id) {
@@ -296,6 +423,27 @@ function showToast(msg, isError) {
   t.classList.toggle('error', !!isError);
   t.classList.add('show');
   setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function badgeHTML(value, kind) {
+  return '<span class="badge ' + kind + '">' + escapeHTML(value) + '</span>';
+}
+
+function onAccrueLabelModeChanged() {
+  var mode = document.getElementById('ac-label-mode').value;
+  var custom = document.getElementById('ac-custom-label');
+  var isCustom = mode === 'custom';
+  custom.disabled = !isCustom;
+  if (!isCustom) custom.value = '';
 }
 
 function api(path, opts) {
@@ -339,9 +487,13 @@ function submitAccrue() {
   var amount = parseInt(document.getElementById('ac-amount').value, 10);
   var ttl = document.getElementById('ac-ttl').value;
   var idem = document.getElementById('ac-idem').value.trim();
+  var labelMode = document.getElementById('ac-label-mode').value;
+  var customLabel = document.getElementById('ac-custom-label').value.trim();
   if (!amount || amount <= 0) { showToast('Enter a positive amount', true); return; }
   var payload = { amount: amount, idempotency_key: idem };
   if (ttl) payload.ttl_days = parseInt(ttl, 10);
+  if (labelMode === 'test' || labelMode === 'real') payload.label = labelMode;
+  if (labelMode === 'custom' && customLabel) payload.label = customLabel;
   api('/v1/users/' + encodeURIComponent(u) + '/accruals', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -350,8 +502,14 @@ function submitAccrue() {
     showStatus('ac-status', r.status);
     document.getElementById('ac-result').textContent = JSON.stringify(r.body, null, 2);
     if (r.ok) {
-      showToast('Accrued ' + r.body.amount + ' points to ' + r.body.user_id);
-      if (u === currentUser()) loadBalance();
+      var labelSuffix = payload.label ? ' [' + payload.label + ']' : '';
+      showToast('Accrued ' + r.body.amount + ' points to ' + r.body.user_id + labelSuffix);
+      document.getElementById('user-id').value = u;
+      ['ac-user', 'hold-user', 'debit-user'].forEach(function(id) {
+        document.getElementById(id).value = u;
+      });
+      loadBalance();
+      loadLedger();
     } else {
       var msg = (r.body && (r.body.message || r.body.error)) || ('HTTP ' + r.status);
       showToast(msg, true);
@@ -484,23 +642,33 @@ function loadLedger() {
     var html = entries.map(function(e) {
       var cls = e.amount > 0 ? 'pts-pos' : (e.amount < 0 ? 'pts-neg' : '');
       var ref = e.ref_type ? (e.ref_type + ' #' + e.ref_id) : '-';
-      var note = e.note ? '<span class="badge ' + (e.note === 'test' ? 'badge-info' : 'badge-gray') + '">' + e.note + '</span>' : '-';
+      var label = '-';
+      if (e.label) {
+        var labelClass = e.label === 'test' ? 'badge-info' : (e.label === 'real' ? 'badge-success' : 'badge-gray');
+        label = badgeHTML(e.label, labelClass);
+      }
+      var note = '-';
+      if (e.note && e.note !== e.label) {
+        note = badgeHTML(e.note, 'badge-gray');
+      }
       return '<tr>' +
         '<td class="td-id">#' + e.id + '</td>' +
-        '<td>' + e.type + '</td>' +
+        '<td>' + escapeHTML(e.type) + '</td>' +
         '<td class="' + cls + '">' + (e.amount > 0 ? '+' : '') + e.amount + '</td>' +
-        '<td style="color:var(--text2)">' + ref + '</td>' +
+        '<td style="color:var(--text2)">' + escapeHTML(ref) + '</td>' +
+        '<td>' + label + '</td>' +
         '<td>' + note + '</td>' +
         '<td style="color:var(--text2)">' + new Date(e.created_at).toLocaleString() + '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
+    document.getElementById('ledger-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">No transactions yet</td></tr>';
   }).catch(function(e) {
     showToast('Failed to load transactions: ' + e.message, true);
   });
 }
 
 onUserChanged();
+onAccrueLabelModeChanged();
 </script>
 </body>
 </html>

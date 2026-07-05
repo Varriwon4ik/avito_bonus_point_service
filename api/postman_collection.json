@@ -2,7 +2,7 @@
   "info": {
     "name": "Bonus Points Ledger Service",
     "_postman_id": "9bc1c327-7b53-4e2a-a2c8-1ee5f4b5c110",
-    "description": "Week 2 API collection for the Bonus Points Ledger Service. Includes representative success and error responses for the current MVP v0 and the planned paginated transactions contract.",
+    "description": "API collection for the Bonus Points Ledger Service. Includes the current accrual contract with optional transaction labels and the paginated transactions response.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -56,7 +56,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"amount\": 500,\n  \"ttl_days\": 180,\n  \"idempotency_key\": \"order_12345\"\n}"
+          "raw": "{\n  \"amount\": 500,\n  \"ttl_days\": 180,\n  \"idempotency_key\": \"order_12345\",\n  \"label\": \"test\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/v1/users/{{userId}}/accruals",
@@ -303,40 +303,7 @@
       ]
     },
     {
-      "name": "List Transactions (Current MVP v0)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/v1/users/{{userId}}/transactions?limit=100",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "v1",
-            "users",
-            "{{userId}}",
-            "transactions"
-          ],
-          "query": [
-            {
-              "key": "limit",
-              "value": "100"
-            }
-          ]
-        }
-      },
-      "response": [
-        {
-          "name": "200 OK",
-          "status": "OK",
-          "code": 200,
-          "body": "[\n  {\n    \"id\": 10,\n    \"user_id\": \"user_123\",\n    \"type\": \"accrual\",\n    \"amount\": 500,\n    \"ref_type\": \"lot\",\n    \"ref_id\": 1,\n    \"created_at\": \"2026-06-14T10:00:00Z\"\n  }\n]"
-        }
-      ]
-    },
-    {
-      "name": "List Transactions (Planned MVP v1 Pagination)",
+      "name": "List Transactions",
       "request": {
         "method": "GET",
         "header": [],
@@ -361,21 +328,14 @@
               "value": "20"
             }
           ]
-        },
-        "description": "Planned Week 2 prototype request. This contract is documented for MVP v1 even though MVP v0 still exposes a limit-based transaction list."
+        }
       },
       "response": [
         {
           "name": "200 OK",
           "status": "OK",
           "code": 200,
-          "body": "[\n  {\n    \"id\": 10,\n    \"user_id\": \"user_123\",\n    \"type\": \"accrual\",\n    \"amount\": 500,\n    \"ref_type\": \"lot\",\n    \"ref_id\": 1,\n    \"created_at\": \"2026-06-14T10:00:00Z\"\n  }\n]"
-        },
-        {
-          "name": "400 Bad Request",
-          "status": "Bad Request",
-          "code": 400,
-          "body": "{\n  \"error\": \"invalid pagination parameters\"\n}"
+          "body": "{\n  \"user_id\": \"user_123\",\n  \"page\": 1,\n  \"offset\": 20,\n  \"total\": 1,\n  \"entries\": [\n    {\n      \"id\": 10,\n      \"user_id\": \"user_123\",\n      \"type\": \"accrual\",\n      \"amount\": 500,\n      \"ref_type\": \"lot\",\n      \"ref_id\": 1,\n      \"label\": \"test\",\n      \"created_at\": \"2026-06-14T10:00:00Z\"\n    }\n  ]\n}"
         }
       ]
     }
