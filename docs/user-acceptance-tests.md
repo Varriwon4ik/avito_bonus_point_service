@@ -16,6 +16,9 @@ increment (web UI at `/`, Swagger UI at `/docs`) or via the HTTP API.
 | UAT-001 | Read a user's points balance | Active | Core balance workflow |
 | UAT-002 | Two-phase redemption at checkout (hold → confirm / cancel) | Active | Core debit safety |
 | UAT-003 | Review paginated transaction history | Active | US-09 (Sprint 2) |
+| UAT-004 | See exact HTTP response codes in the web UI | Active | US-16 (Sprint 3) |
+| UAT-005 | Run the autotester from the web UI | Active | US-17 (Sprint 3) |
+| UAT-006 | Label a transaction and find it in the history | Active | US-18, US-08 (Sprint 3) |
 
 ---
 
@@ -107,6 +110,132 @@ showed the `page`/`offset` parameters and the response envelope. The customer wa
 satisfied that the Sprint 2 changes deliver the requested capability.
 
 ---
+
+## UAT-004: See exact HTTP response codes in the web UI
+
+- **Status:** Active
+- **User goal:** A system administrator sees the exact HTTP status code and
+  outcome of every accrual/debit operation directly in the web UI, so problems
+  can be reported and diagnosed precisely.
+- **Verifies:** [US-16 / #39](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/39)
+  and its acceptance criteria (frontend displays the backend response code
+  alongside the other request details).
+- **Preconditions:** The service is deployed and reachable; the web UI opens at `/`.
+
+**Steps:**
+
+1. In the **Accrue** view, accrue points for a test user (valid amount and
+   idempotency key) and submit.
+2. In the **Debit** view, attempt to debit points from a non-existent user.
+3. Attempt an accrual with an invalid amount (e.g. `0`).
+
+**Expected outcome:** Step 1 shows a success status (`200`/`201`, green) next
+to the operation result. Step 2 shows `404` (red) with the not-found message.
+Step 3 shows `400` with the validation message. In every case the displayed
+code matches the actual backend response (verifiable via Swagger UI or curl).
+
+### Execution history
+
+**2026-07-03 (Sprint 3 review / UAT session)** — **Passed.** The implementer
+shared the screen and the customer directed the demonstration: a successful
+accrual showed the green success code, and a debit against a non-existent user
+showed the red `404`. The customer accepted the feature and left a non-blocking
+suggestion to reconsider how the codes are presented ("you can change the
+response codes here... it's not critical").
+
+---
+
+## UAT-005: Run the autotester from the web UI
+
+- **Status:** Active
+- **User goal:** A system administrator runs the built-in autotester scenarios
+  against the live instance from the browser and reads a per-check pass/fail
+  report, without needing the console tool.
+- **Verifies:** [US-17 / #40](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/40)
+  and its acceptance criteria (Autotester tab drives the backend engine and
+  displays its results).
+- **Preconditions:** The service is deployed and reachable; the web UI opens at `/`.
+
+**Steps:**
+
+1. Open the **Autotester** tab.
+2. Fill in a scenario: label, test user id, amount, TTL days, number of
+   parallel requests.
+3. Run the scenario and read the per-check report.
+
+**Expected outcome:** The run returns a report listing each check (accrual
+correctness, parallel accrual) with pass/fail per check and an overall verdict.
+The target user is forced under the `autotest-` prefix, so no real account is
+touched; the results match what `cmd/autotest` reports for the same scenario.
+
+### Execution history
+
+**2026-07-03 (Sprint 3 review / UAT session)** — **Passed.** The customer
+directed the demonstration of the Autotester tab and probed the scenario
+semantics (single vs. multiple idempotency keys). Feature accepted. Resulting
+backlog item: extend the autotester with a parallel multi-idempotency-key
+scenario —
+[US-19 / #50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50).
+
+---
+
+## UAT-006: Label a transaction and find it in the history
+
+- **Status:** Active
+- **User goal:** A system administrator marks accruals with a label (preset
+  such as `test`/`real`, or a custom one) and later tells labelled transactions
+  apart in the history, e.g. to separate test traffic from real traffic.
+- **Verifies:** [US-18 / #41](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/41)
+  and its acceptance criteria; step 4 also exercises the US-08
+  ([#5](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/5))
+  TTL bounds.
+- **Preconditions:** The service is deployed and reachable; a test user exists
+  or can be created by accruing points.
+
+**Steps:**
+
+1. In the **Accrue** view, accrue points choosing the preset label `test`.
+2. Accrue again with a custom label (e.g. `promo-july`).
+3. Open the **Transactions** view for the user and locate both entries.
+4. Attempt an accrual with `ttl_days` outside the configured
+   `MIN_TTL_DAYS`–`MAX_TTL_DAYS` range.
+
+**Expected outcome:** Steps 1–2 succeed (`201`); labels are trimmed/validated
+(≤ 32 chars, no control characters — invalid labels get `400`). Step 3 shows
+both ledger entries with their labels displayed. Step 4 returns
+`400 Bad Request` with a clear message, and no lot is created.
+
+### Execution history
+
+**2026-07-03 (Sprint 3 review / UAT session)** — **Passed.** The implementer
+demonstrated preset and custom labels under the customer's direction; the
+customer specifically praised custom labels ("you can assign a certain product
+with a label to its transaction and have a convenient tool to confirm debits").
+The TTL-validation behaviour (US-08) was demonstrated in the same session and
+accepted. No defect PBI opened.
+
+---
+
+## Customer feedback and resulting backlog decisions (2026-07-03)
+
+The Sprint 3 session was run screen-share style: each implementer demonstrated
+their feature while the **customer directed the demonstration**. UAT-004,
+UAT-005, and UAT-006 all passed; the older scenarios UAT-001–UAT-003 were not
+formally re-executed but their core flows (accrual, debit, transaction history)
+were exercised throughout the new demonstrations and behaved as previously
+accepted. Feedback converted into backlog decisions:
+
+- **Autotester with multiple parallel idempotency keys** → new story
+  [US-19 / #50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50)
+  (added to the Product Backlog during the meeting).
+- **Response-code presentation could be improved** → non-blocking suggestion on
+  US-16; noted for future UI polish, no PBI opened at the customer's own
+  assessment ("not critical").
+- **Run tests against a demo/earlier version of the product** → still open;
+  carried in [docs/roadmap.md](roadmap.md) as a Sprint 4 candidate.
+- **Team-process feedback** ("work as a team, a whole") → taken into the
+  Sprint 3 retrospective action points
+  ([reports/week5/retrospective.md](../reports/week5/retrospective.md)).
 
 ## Customer feedback and resulting backlog decisions (2026-06-28)
 
