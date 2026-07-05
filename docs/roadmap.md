@@ -31,7 +31,7 @@ Also delivered in Sprint 1 (`Should Have`):
 
 - **US-10** — structured request logging and a Prometheus `/metrics` endpoint.
 
-## Now — Sprint 2 (Assignment 4) — 22–28 Jun 2026
+## Sprint 2 (Assignment 4) — 22–28 Jun 2026 — delivered
 
 [Sprint 2 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2)
 
@@ -50,24 +50,64 @@ Delivered increment:
 Reverted this Sprint: **US-07** (manual accrual) was implemented then reverted
 due to bugs and is now `Removed`.
 
-## Next — Sprint 3 (candidate MVP v2)
+## Now — Sprint 3 (MVP v2, Assignment 5) — 29 Jun–5 Jul 2026
 
-Refine and pull from the remaining `Should Have` backlog:
+[Sprint 3 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3)
+
+**Sprint Goal:** deliver MVP v2 by making the ledger directly usable and
+verifiable from the web UI — exact HTTP response feedback, a browser-based
+autotester, transaction labels, and enforced per-accrual TTL bounds — while
+documenting the architecture, key decisions (ADRs), and the development process
+so the product can keep evolving safely.
+
+Delivered increment (16 SP, mapped to release `v2.0.0`):
+
+- **US-08** (`Should Have`) — configurable per-accrual TTL validation and bounds
+  (`MIN_TTL_DAYS` / `MAX_TTL_DAYS`, out-of-range requests get `400`).
+- **US-16** (`Should Have`) — exact HTTP response codes surfaced in the web UI
+  for accrual/debit operations.
+- **US-17** (`Should Have`) — web Autotester tab backed by
+  `POST /v1/autotest/run` and the shared `internal/autotest` engine.
+- **US-18** (`Could Have`) — labels on transactions (preset `test`/`real` or
+  custom), shown in the transactions view. First landing was reverted and the
+  feature was re-landed fixed within the Sprint.
+
+Also delivered: maintained architecture documentation with three views
+([docs/architecture/README.md](architecture/README.md)), five ADRs,
+[docs/development-process.md](development-process.md), and the hosted
+documentation site.
+
+**Scope note:** the earlier candidate plan for MVP v2 listed US-01 and US-02.
+During Sprint 3 planning the team re-prioritized toward the web-UI feature set
+above, because the customer's Sprint 2 feedback centred on seeing and verifying
+behaviour directly (responses, autotests, labels); US-01/US-02 moved to
+Sprint 4, as agreed with the customer at the Sprint 3 review.
+
+## Next — Sprint 4 (candidate)
 
 - **US-01** — bulk points accrual for promotional campaigns.
 - **US-02** — list and audit a user's points lots (support tooling API).
-- **US-08** — configurable per-accrual TTL validation and bounds.
-- Customer-requested follow-ups from the Sprint 1 review:
-  - Apply concurrency tests to older code paths to show measurable impact
-    (follow-up on US-11).
+- **US-19** — autotester scenarios with multiple idempotency keys in parallel
+  ([#50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50);
+  requested by the customer at the Sprint 3 review).
+- Customer-requested follow-ups still open:
+  - Run the autotester/regression checks against a demo (earlier) version of
+    the product to prove changes are valid (carried from Sprint 2/3).
   - Model point expiry as an explicit ledger transaction rather than silent
-    removal, so expirations are auditable (follow-up on US-12).
+    removal, so expirations are auditable (follow-up on US-12; see
+    [ADR-002](architecture/adr/ADR-002-lazy-expiry-and-fifo-by-expiry-consumption.md)).
 
 ## Later — backlog / under consideration
 
 - Authentication / authorization for admin-facing operations. A first attempt at
   US-07 (manual-accrual admin auth) was reverted in Sprint 2; revisit with a
   hardened, fully tested design before re-introducing it.
+- Architecture, quality, and process work that must continue: keep
+  [docs/architecture/](architecture/README.md), the ADR set, and
+  [docs/development-process.md](development-process.md) current as the product
+  changes; keep all Assignment 4/5 CI gates active; consider raising the
+  30% critical-module coverage floor and automating VM deployment
+  ([ADR-005](architecture/adr/ADR-005-single-binary-web-ui-and-compose-deployment.md)).
 
 ## Out of scope (current)
 
@@ -79,6 +119,6 @@ Refine and pull from the remaining `Should Have` backlog:
 
 | Release | Scope | Status |
 |---|---|---|
-| `v1.0.0` | MVP v1 (US-05, US-10, US-11, US-12, US-13) | Sprint 1 — released |
-| `v1.1.0` (planned) | Sprint 2 increment (US-09, US-14, US-15) | Sprint 2 — pending release |
-| `v2.0.0` (planned) | MVP v2 (US-01, US-02, US-08 + review follow-ups) | Sprint 3 |
+| [`v1.0.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.0.0) | MVP v1 (US-05, US-10, US-11, US-12, US-13) | Sprint 1 — released |
+| [`v1.1.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.1.0) | Sprint 2 increment (US-09, US-14, US-15) | Sprint 2 — released |
+| [`v2.0.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.0.0) | MVP v2 (US-08, US-16, US-17, US-18 + architecture/process docs) | Sprint 3 — released |

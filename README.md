@@ -55,9 +55,14 @@ To run locally without Docker:
 ```sh
 export DB_DSN="postgres://bonus:bonus@localhost:5432/bonus_ledger?sslmode=disable"
 export DEFAULT_TTL_DAYS=365   # optional, default lifetime of accrued points
+export MIN_TTL_DAYS=1         # optional, lower bound for per-accrual ttl_days (US-08)
+export MAX_TTL_DAYS=1825      # optional, upper bound for per-accrual ttl_days (US-08)
 export HOLD_TIMEOUT_HOURS=24  # optional, holds unresolved for longer than this are auto-released
 go run ./cmd/api
 ```
+
+Accruals whose `ttl_days` falls outside the configured
+`MIN_TTL_DAYS`–`MAX_TTL_DAYS` range are rejected with `400 Bad Request`.
 
 Sanitized example environment values are available in [`.env.example`](./.env.example).
 
@@ -69,8 +74,31 @@ API. The address is on the university private network, so access requires the
 university network/VPN; exact private access details for graders are provided
 through Moodle.
 
+## Documentation
+
+- **Hosted documentation site (browsable):**
+  <https://varriwon4ik.github.io/avito_bonus_point_service/> — the maintained
+  `docs/` set published with MkDocs on every merge to `main`.
+- **Architecture:** [docs/architecture/README.md](./docs/architecture/README.md)
+  — static, dynamic, and deployment views plus the
+  [ADR index](./docs/architecture/README.md#architecture-decision-records-adr-index).
+- **Development process & configuration management:**
+  [docs/development-process.md](./docs/development-process.md).
+- Quality and testing: [docs/quality-requirements.md](./docs/quality-requirements.md),
+  [docs/quality-requirement-tests.md](./docs/quality-requirement-tests.md),
+  [docs/testing.md](./docs/testing.md),
+  [docs/user-acceptance-tests.md](./docs/user-acceptance-tests.md),
+  [docs/definition-of-done.md](./docs/definition-of-done.md).
+- Planning: [docs/roadmap.md](./docs/roadmap.md),
+  [docs/user-stories.md](./docs/user-stories.md).
+
 ## Submissions
 
+- **Week 5 (Assignment 5, Sprint 3 / MVP v2):** public report index at
+  [reports/week5/README.md](./reports/week5/README.md). Release mapped to MVP v2:
+  [v2.0.0](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.0.0).
+  New maintained assets: [docs/architecture/](./docs/architecture/README.md) and
+  [docs/development-process.md](./docs/development-process.md).
 - **Week 4 (Assignment 4, Sprint 2):** public report index at
   [reports/week4/README.md](./reports/week4/README.md). Quality assets:
   [docs/quality-requirements.md](./docs/quality-requirements.md),

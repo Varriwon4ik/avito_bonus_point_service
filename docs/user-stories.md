@@ -10,6 +10,7 @@ linked issue for the live statement, acceptance criteria, and discussion.
 - Process semantics (statuses, MoSCoW, Work Status, traceability): `Process_Requirements.md`
 - Sprint 1 milestone: [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1)
 - Sprint 2 milestone (Assignment 4): [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2)
+- Sprint 3 milestone (Assignment 5): [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3)
 
 Active stories are ordered by MoSCoW priority, then Sprint, then stable ID.
 Removed stories are listed after all active stories.
@@ -22,11 +23,15 @@ Removed stories are listed after all active stories.
 | US-13 | HTTP response codes & OpenAPI docs | Must Have | [#12](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/12) | Active | Done | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
 | US-14 | Continuous integration pipeline for every change | Must Have | [#28](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/28) | Active | Done | [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
 | US-15 | Automated tests for points accrue (autotester) | Must Have | [#29](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/29) | Active | Done | [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
-| US-10 | Structured request logging & metrics endpoint | Should Have | [#7](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/7) | Active | In Review | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
+| US-10 | Structured request logging & metrics endpoint | Should Have | [#7](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/7) | Active | Done | [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1) |
 | US-09 | Pagination for transaction history | Should Have | [#6](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/6) | Active | Done | [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
+| US-08 | Configurable per-accrual TTL validation and bounds | Should Have | [#5](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/5) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
+| US-16 | Frontend HTTP responses implementation | Should Have | [#39](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/39) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
+| US-17 | Frontend autotester implementation | Should Have | [#40](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/40) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
+| US-18 | An option to put labels on transactions | Could Have | [#41](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/41) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
 | US-01 | Bulk points accrual for promotional campaigns | Should Have | [#1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1) | Active | To Do | — |
 | US-02 | List and audit a user's points lots | Should Have | [#2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2) | Active | To Do | — |
-| US-08 | Configurable per-accrual TTL validation and bounds | Should Have | [#5](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/5) | Active | To Do | — |
+| US-19 | Autotester scenarios with multiple idempotency keys in parallel | Could Have | [#50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50) | Active | To Do | — |
 | US-07 | Manual bonus point accrual | — | [#4](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/4) | Removed | — | — |
 | US-03 | Earn bonus points after purchase | — | — | Removed | — | — |
 | US-04 | Maintain automated regression coverage | — | — | Removed | — | — |
@@ -50,9 +55,20 @@ Removed stories are listed after all active stories.
   tagged release. Its requirement status is now **`Removed`**; the stable ID is
   preserved for traceability and is not re-issued or reused. The team
   prioritized a different feature in its place for the Sprint.
+- **US-18** (transaction labels) was merged during Sprint 3
+  ([PR #44](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/44)),
+  **reverted** ([PR #47](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/47))
+  after issues surfaced, and then **re-landed fixed** within the same Sprint
+  ([PR #49](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/49),
+  together with US-17). Unlike US-07, the story shipped in `v2.0.0` and remains
+  `Active`/`Done`; the revert history is preserved in the linked PRs.
+- **US-19** was raised by the customer during the Sprint 3 Review / UAT session
+  (3 Jul 2026): extend the autotester to run parallel scenarios with multiple
+  distinct idempotency keys. It is refined but not yet estimated or
+  Sprint-committed.
 
 ## Stable ID allocation
 
-The highest allocated stable ID is **US-15** (allocated in Sprint 2). New user
+The highest allocated stable ID is **US-19** (allocated in Sprint 3). New user
 stories discovered after migration receive the next unused ID starting at
-**US-16**.
+**US-20**.

@@ -1,0 +1,48 @@
+%% Dynamic view — sequence diagram (diagrams-as-code source of truth).
+%% Scenario: two-phase redemption at checkout (hold -> confirm) with
+%% idempotency replay and row-level locking.
+%% Rendered in context in docs/architecture/README.md (same Mermaid code).
+sequenceDiagram
+    autonumber
+    participant Client as Store checkout service
+    participant MW as Observability middleware
+    participant API as HTTP handler (internal/api)
+    participant Store as Ledger store (internal/data)
+    participant PG as PostgreSQL
+
+    Note over Client,PG: Phase 1 — reserve points: POST /v1/users/{id}/holds
+    Client->>MW: POST /v1/users/{id}/holds {amount, idempotency_key}
+    MW->>API: forward (structured log + latency timer started)
+    API->>API: validate JSON, amount > 0, idempotency_key present
+    API->>Store: CreateHold(userID, amount, key)
+    Store->>PG: BEGIN
+    Store->>PG: look up idempotency_keys (key, endpoint)
+    alt retry of an already-completed request
+        PG-->>Store: cached (status, body) of first execution
+        Store-->>API: original result
+        API-->>Client: replayed response — no second side effect
+    else first execution
+        Store->>PG: SELECT lots of the user WHERE remaining > 0 AND not expired ORDER BY expires_at FOR UPDATE
+        PG-->>Store: user's spendable lots, locked, FIFO by expiry
+        Store->>Store: available >= amount? (else 409 insufficient points)
+        Store->>PG: INSERT holds (status=active) + hold_allocations, UPDATE lots.remaining
+        Store->>PG: INSERT ledger_entries (type=hold)
+        Store->>PG: INSERT idempotency_keys (cached status + body)
+        Store->>PG: COMMIT
+        Store-->>API: hold {hold_id, status: active}
+        API-->>Client: 201 Created
+    end
+
+    Note over Client,PG: Phase 2 — finalise: POST /v1/holds/{hold_id}/confirm (or /cancel to release)
+    Client->>MW: POST /v1/holds/{hold_id}/confirm
+    MW->>API: forward
+    API->>Store: ConfirmHold(holdID)
+    Store->>PG: BEGIN + SELECT hold FOR UPDATE
+    alt hold is active
+        Store->>PG: UPDATE holds SET status=confirmed + INSERT ledger_entries (type=debit)
+        Store->>PG: COMMIT
+        API-->>Client: 200 {status: confirmed}
+    else hold already confirmed or cancelled
+        API-->>Client: idempotent same-state response (or 409 on an invalid transition)
+    end
+    MW-->>MW: emit log line + Prometheus counter/histogram samples

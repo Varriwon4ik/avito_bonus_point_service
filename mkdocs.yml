@@ -1,0 +1,60 @@
+site_name: Bonus Points Ledger Service
+site_description: Maintained documentation for the Bonus Points Ledger Service (Team 01)
+site_url: https://varriwon4ik.github.io/avito_bonus_point_service/
+repo_url: https://github.com/Varriwon4ik/avito_bonus_point_service
+repo_name: Varriwon4ik/avito_bonus_point_service
+edit_uri: blob/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - toc.integrate
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview and views: architecture/README.md
+      - ADR-001 — Postgres row locking: architecture/adr/ADR-001-postgres-row-locking-for-ledger-integrity.md
+      - ADR-002 — Lazy expiry and FIFO consumption: architecture/adr/ADR-002-lazy-expiry-and-fifo-by-expiry-consumption.md
+      - ADR-003 — Layered monolith and coverage gates: architecture/adr/ADR-003-layered-monolith-with-gated-critical-modules.md
+      - ADR-004 — Client-supplied idempotency keys: architecture/adr/ADR-004-client-supplied-idempotency-keys.md
+      - ADR-005 — Single binary and compose deployment: architecture/adr/ADR-005-single-binary-web-ui-and-compose-deployment.md
+  - Process:
+      - Development process: development-process.md
+      - Definition of Done: definition-of-done.md
+      - Roadmap: roadmap.md
+      - User stories: user-stories.md
+  - Quality and testing:
+      - Testing status: testing.md
+      - Quality requirements: quality-requirements.md
+      - Quality requirement tests: quality-requirement-tests.md
+      - User acceptance tests: user-acceptance-tests.md
