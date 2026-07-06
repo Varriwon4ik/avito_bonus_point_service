@@ -2,7 +2,7 @@
 
 This document defines the measurable, non-functional quality requirements (QRs)
 for the Bonus Points Ledger Service. Each QR uses a distinct
-[ISO/IEC 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010)
+[ISO/IEC 25010](https://www.iso.org/standard/35733.html)
 quality sub-characteristic, states a measurable scenario, explains why it
 matters, and links to the automated quality requirement test(s) that verify it.
 
