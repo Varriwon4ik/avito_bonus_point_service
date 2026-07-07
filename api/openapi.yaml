@@ -54,6 +54,38 @@ paths:
                 http_request_duration_seconds_count{method="GET",path="/v1/users/{id}/balance"} 5
                 # TYPE bonus_points_available gauge
                 bonus_points_available 1200
+  /v1/accruals/batch:
+    post:
+      tags: [Accruals]
+      summary: Accrue bonus points for multiple users in one request
+      description: |
+        Processes a batch of accrual items independently so one invalid or failed item does not abort the rest of the request.
+        Each batch item must carry its own idempotency key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAccrualRequest'
+      responses:
+        '207':
+          description: Batch processed; each item reports its own outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchAccrualResponse'
+        '400':
+          description: Malformed JSON or an empty batch payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/users/{id}/accruals:
     post:
       tags: [Accruals]
@@ -419,6 +451,71 @@ components:
           minLength: 1
           description: Optional ledger label stored in the entry note field. Autotest uses `test`.
           example: test
+    BatchAccrualRequest:
+      type: object
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/BatchAccrualItem'
+    BatchAccrualItem:
+      type: object
+      required: [user_id, amount, idempotency_key]
+      additionalProperties: false
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+          example: user_123
+        amount:
+          type: integer
+          minimum: 1
+          example: 500
+        ttl_days:
+          type: integer
+          minimum: 1
+          example: 180
+        idempotency_key:
+          type: string
+          minLength: 1
+          example: order_12345
+        label:
+          type: string
+          minLength: 1
+          example: test
+    BatchAccrualResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchAccrualResultItem'
+    BatchAccrualResultItem:
+      type: object
+      required: [index, status]
+      properties:
+        index:
+          type: integer
+          example: 0
+        status:
+          type: string
+          enum: [created, error]
+          example: created
+        user_id:
+          type: string
+          example: user_123
+        result:
+          $ref: '#/components/schemas/AccrualResult'
+        error:
+          type: string
+          example: bad_request
+        message:
+          type: string
+          example: user_id is required
     AmountRequest:
       type: object
       required: [amount, idempotency_key]

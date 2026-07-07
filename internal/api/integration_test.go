@@ -235,6 +235,58 @@ func TestAccrualLabelIsStoredInLedger(t *testing.T) {
 	}
 }
 
+func TestBatchAccrualsReturnPerItemResults(t *testing.T) {
+	env := newTestEnv(t)
+	userA := "batch_user_a"
+	userB := "batch_user_b"
+
+	status, header, body := doJSON(t, http.MethodPost, env.Server.URL+"/v1/accruals/batch", map[string]any{
+		"items": []map[string]any{
+			{"user_id": userA, "amount": 100, "ttl_days": 30, "idempotency_key": "batch-a"},
+			{"user_id": userB, "amount": 200, "ttl_days": 45, "idempotency_key": "batch-b"},
+			{"user_id": "", "amount": 50, "ttl_days": 15, "idempotency_key": "batch-c"},
+		},
+	})
+	if status != http.StatusMultiStatus {
+		t.Fatalf("batch accrual: status=%d body=%v", status, body)
+	}
+	assertJSONContentType(t, header)
+
+	results, ok := body["results"].([]any)
+	if !ok || len(results) != 3 {
+		t.Fatalf("expected 3 batch results, got %v", body["results"])
+	}
+
+	first, ok := results[0].(map[string]any)
+	if !ok || first["status"] != "created" {
+		t.Fatalf("expected first item to succeed, got %v", results[0])
+	}
+	second, ok := results[1].(map[string]any)
+	if !ok || second["status"] != "created" {
+		t.Fatalf("expected second item to succeed, got %v", results[1])
+	}
+	third, ok := results[2].(map[string]any)
+	if !ok || third["status"] != "error" {
+		t.Fatalf("expected third item to fail, got %v", results[2])
+	}
+
+	status, _, balanceA := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+userA+"/balance", nil)
+	if status != http.StatusOK {
+		t.Fatalf("balance a: status=%d body=%v", status, balanceA)
+	}
+	if balanceA["available"].(float64) != 100 {
+		t.Fatalf("expected user A available=100, got %v", balanceA["available"])
+	}
+
+	status, _, balanceB := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+userB+"/balance", nil)
+	if status != http.StatusOK {
+		t.Fatalf("balance b: status=%d body=%v", status, balanceB)
+	}
+	if balanceB["available"].(float64) != 200 {
+		t.Fatalf("expected user B available=200, got %v", balanceB["available"])
+	}
+}
+
 func TestHoldConfirmCancel(t *testing.T) {
 	env := newTestEnv(t)
 	user := "user_hold"
