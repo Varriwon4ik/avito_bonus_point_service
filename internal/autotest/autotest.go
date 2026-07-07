@@ -94,6 +94,7 @@ func Checks() []Check {
 	return []Check{
 		{Name: "accrual correctness", Run: RunAccrualCorrectness},
 		{Name: "parallel accrual", Run: RunParallelAccrual},
+		{Name: "multi-key parallel accrual", Run: RunMultiKeyParallelAccrual},
 	}
 }
 
@@ -365,6 +366,151 @@ func RunParallelAccrual(rt *Runtime, scn data.AutotestScenario) error {
 	}
 
 	return nil
+}
+
+// RunMultiKeyParallelAccrual fires ParallelRequests accruals simultaneously,
+// each with its own distinct idempotency key, then:
+//   - AC1: asserts each key produced exactly one applied operation and the
+//     final balance/ledger are consistent with N applied operations.
+//   - AC2: re-runs the same N keys and asserts the idempotency cache serves
+//     cached responses without creating new lots or ledger entries.
+func RunMultiKeyParallelAccrual(rt *Runtime, scn data.AutotestScenario) error {
+	// Stable, deterministic keys so the retry pass (AC2) can reuse them.
+	runID := fmt.Sprintf("autotest-%s-multikey-%d", scn.Label, time.Now().UTC().UnixNano())
+	keys := make([]string, scn.ParallelRequests)
+	for i := range keys {
+		keys[i] = fmt.Sprintf("%s-%d", runID, i)
+	}
+
+	// ── AC1: first pass — every key must produce exactly one new lot ───────
+	before, err := rt.loadUserState(scn.UserID)
+	if err != nil {
+		return err
+	}
+
+	firstResults, err := rt.fireParallelAccruals(scn, keys)
+	if err != nil {
+		return err
+	}
+
+	uniqueLots := make(map[int64]struct{}, scn.ParallelRequests)
+	for i, res := range firstResults {
+		if res.Status != http.StatusCreated {
+			return fmt.Errorf("multi-key request %d (key %q) returned status %d: %s",
+				i+1, keys[i], res.Status, strings.TrimSpace(res.Body))
+		}
+		if res.LotID <= 0 {
+			return fmt.Errorf("multi-key request %d returned an invalid lot id", i+1)
+		}
+		if _, dup := uniqueLots[res.LotID]; dup {
+			return fmt.Errorf("multi-key request %d reused lot id %d — duplicate apply detected", i+1, res.LotID)
+		}
+		uniqueLots[res.LotID] = struct{}{}
+	}
+
+	after, err := rt.loadUserState(scn.UserID)
+	if err != nil {
+		return err
+	}
+
+	expectedDelta := scn.Amount * scn.ParallelRequests
+	if after.Balance.Available != before.Balance.Available+expectedDelta {
+		return fmt.Errorf("AC1 balance mismatch: want available=%d, got %d",
+			before.Balance.Available+expectedDelta, after.Balance.Available)
+	}
+	if after.LedgerTotal != before.LedgerTotal+scn.ParallelRequests {
+		return fmt.Errorf("AC1 ledger mismatch: want %d entries, got %d",
+			before.LedgerTotal+scn.ParallelRequests, after.LedgerTotal)
+	}
+	if len(after.Lots) != len(before.Lots)+scn.ParallelRequests {
+		return fmt.Errorf("AC1 lot count mismatch: want %d, got %d",
+			len(before.Lots)+scn.ParallelRequests, len(after.Lots))
+	}
+
+	// ── AC2: retry pass — same keys must be served from idempotency cache ──
+	retryResults, err := rt.fireParallelAccruals(scn, keys)
+	if err != nil {
+		return err
+	}
+
+	for i, res := range retryResults {
+		// Both 200 OK (cached replay) and 201 Created are acceptable;
+		// what matters is that the returned lot ID matches the first pass.
+		if res.Status != http.StatusCreated && res.Status != http.StatusOK {
+			return fmt.Errorf("AC2 retry request %d (key %q) returned unexpected status %d",
+				i+1, keys[i], res.Status)
+		}
+		if _, seenBefore := uniqueLots[res.LotID]; !seenBefore {
+			return fmt.Errorf("AC2 retry request %d returned a NEW lot id %d — idempotency cache miss",
+				i+1, res.LotID)
+		}
+	}
+
+	afterRetry, err := rt.loadUserState(scn.UserID)
+	if err != nil {
+		return err
+	}
+
+	// Balance and ledger must not change after the retry.
+	if afterRetry.Balance.Available != after.Balance.Available {
+		return fmt.Errorf("AC2 balance changed after retry: want %d, got %d",
+			after.Balance.Available, afterRetry.Balance.Available)
+	}
+	if afterRetry.LedgerTotal != after.LedgerTotal {
+		return fmt.Errorf("AC2 ledger grew after retry: want %d entries, got %d",
+			after.LedgerTotal, afterRetry.LedgerTotal)
+	}
+	if len(afterRetry.Lots) != len(after.Lots) {
+		return fmt.Errorf("AC2 new lots created after retry: want %d, got %d",
+			len(after.Lots), len(afterRetry.Lots))
+	}
+
+	return nil
+}
+
+// fireParallelAccruals fires len(keys) accrual requests simultaneously, one
+// per key, and collects the results in order.
+func (rt *Runtime) fireParallelAccruals(scn data.AutotestScenario, keys []string) ([]parallelResult, error) {
+	results := make([]parallelResult, len(keys))
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(keys))
+
+	for i, key := range keys {
+		wg.Add(1)
+		go func(i int, key string) {
+			defer wg.Done()
+			<-start
+
+			var created data.AccrualResult
+			status, apiErr, err := rt.doJSON(http.MethodPost, accrualPath(scn.UserID), map[string]any{
+				"amount":          scn.Amount,
+				"ttl_days":        scn.TTLDays,
+				"idempotency_key": key,
+				"label":           scn.LedgerLabel,
+			}, &created)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			results[i] = parallelResult{
+				Status: status,
+				Body:   fmt.Sprintf("%s %s", apiErr.Error, apiErr.Message),
+				LotID:  created.LotID,
+			}
+		}(i, key)
+	}
+
+	close(start)
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return results, nil
 }
 
 func accrualPath(userID string) string {

@@ -76,10 +76,11 @@ func (t *tool) run() error {
 		t.printf("1. Create a new accrual test scenario\n")
 		t.printf("2. Run accrual service correctness test\n")
 		t.printf("3. Run parallel transaction test\n")
-		t.printf("4. Run generated/stored test scenarios\n")
-		t.printf("5. Exit\n")
+		t.printf("4. Run multi-key parallel accrual test (US-19)\n")
+		t.printf("5. Run generated/stored test scenarios\n")
+		t.printf("6. Exit\n")
 
-		choice, err := t.promptInt("Choose an option", 5, 1)
+		choice, err := t.promptInt("Choose an option", 6, 1)
 		if err != nil {
 			return err
 		}
@@ -114,6 +115,15 @@ func (t *tool) run() error {
 			}
 			t.runAndReport(autotest.Check{Name: "parallel accrual", Run: autotest.RunParallelAccrual}, scn)
 		case 4:
+			scn, ok, err := t.selectScenario()
+			if err != nil {
+				return err
+			}
+			if !ok {
+				continue
+			}
+			t.runAndReport(autotest.Check{Name: "multi-key parallel accrual", Run: autotest.RunMultiKeyParallelAccrual}, scn)
+		case 5:
 			scenarios, err := t.loadScenarios()
 			if err != nil {
 				return err
@@ -127,7 +137,7 @@ func (t *tool) run() error {
 					t.runAndReport(check, scn)
 				}
 			}
-		case 5:
+		case 6:
 			t.printf("Bye.\n")
 			return nil
 		default:

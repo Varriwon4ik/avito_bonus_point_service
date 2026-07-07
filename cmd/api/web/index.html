@@ -287,9 +287,11 @@
         <div class="card-body">
           <p style="color:var(--text2);margin-bottom:16px">
             Runs the built-in accrual autotester against this live instance — the same checks as the
-            <code style="font-family:var(--mono)">cmd/autotest</code> console tool. It verifies accrual correctness and,
-            crucially, that a burst of parallel accrual requests each produce a distinct lot with a consistent balance
-            and ledger. All requests use a dedicated <code style="font-family:var(--mono)">autotest-</code> test user, so
+            <code style="font-family:var(--mono)">cmd/autotest</code> console tool. It verifies accrual correctness,
+            that a burst of parallel accrual requests each produce a distinct lot with a consistent balance
+            and ledger, and — with the <b>multi-key parallel</b> check (US-19) — that N requests with N distinct
+            idempotency keys each apply exactly once and are served from cache on retry.
+            All requests use a dedicated <code style="font-family:var(--mono)">autotest-</code> test user, so
             your real accounts are never touched.
           </p>
           <div class="form-grid">
