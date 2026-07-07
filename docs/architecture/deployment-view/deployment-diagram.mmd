@@ -1,0 +1,27 @@
+%% Deployment view — deployment diagram (diagrams-as-code source of truth).
+%% Rendered in context in docs/architecture/README.md (same Mermaid code).
+flowchart TB
+    subgraph github ["GitHub (cloud)"]
+        repo["Repository<br/>protected default branch main"]
+        ci["GitHub Actions CI<br/>gofmt, vet, build, tests (-race),<br/>QRT-001..003, coverage gate, govulncheck, Lychee"]
+        pages["GitHub Pages<br/>hosted documentation site (MkDocs)"]
+        repo --> ci
+        repo --> pages
+    end
+
+    subgraph vm ["University VM — 10.93.26.175 (university private network)"]
+        subgraph compose ["docker compose"]
+            api["api container — Go binary cmd/api, port 8080<br/>serves web UI, Swagger UI /docs,<br/>REST API /v1/*, /metrics, /healthz<br/>env: DB_DSN, DEFAULT_TTL_DAYS,<br/>MIN_TTL_DAYS, MAX_TTL_DAYS, HOLD_TIMEOUT_HOURS"]
+            pgc[("postgres container<br/>postgres:16-alpine<br/>named volume for data")]
+        end
+        api -- "SQL over the compose network" --> pgc
+    end
+
+    customer["Customer / grader / operator<br/>browser or HTTP client<br/>on the university network or VPN"]
+    scraper["Prometheus scraper<br/>(internal network, optional)"]
+    dev["Team member"]
+
+    customer -- "http://10.93.26.175:8080 — web UI, /docs, API" --> api
+    scraper -- "GET /metrics" --> api
+    dev -- "branch + pull request" --> repo
+    dev -- "manual deploy: git pull && docker compose up --build" --> compose

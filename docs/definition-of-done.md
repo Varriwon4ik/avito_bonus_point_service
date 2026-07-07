@@ -59,6 +59,15 @@ supporting PBIs required to satisfy its acceptance criteria are also `Done`.
       contract changes.
 - [ ] `docs/user-stories.md` reflects the PBI's current Work Status and Sprint.
 - [ ] The issue links the PR(s), and the PR references the issue number.
+- [ ] **Architecture documentation** — since Assignment 5: if the change
+      affects the system structure, important flows, the deployment model, or
+      an architecturally significant decision, the relevant parts of
+      [docs/architecture/README.md](architecture/README.md) (views, diagrams)
+      are updated and a new or superseding ADR is added in
+      [docs/architecture/adr/](architecture/adr/); otherwise architecture
+      documentation is explicitly not applicable for the change.
+- [ ] `docs/development-process.md` is updated when the change alters the
+      team's workflow, configuration management, or CI/deployment process.
 
 ## 6. Increment integrity
 
@@ -76,6 +85,11 @@ This Definition of Done continues to govern **all later project work**. The
 Assignment 4 tests, automated QRTs, per-module coverage gate, and additional QA
 check are maintained gates: later PBIs must keep them passing, and a gate may be
 removed or narrowed only when replaced by a documented equivalent or stronger
-check. When the product stack, critical modules, quality requirements, or CI
-configuration change, update this document and the linked quality assets so they
-keep describing the current completion standard.
+check. Since Assignment 5, the architecture documentation
+([docs/architecture/](architecture/README.md)), the ADR set, and
+[docs/development-process.md](development-process.md) are maintained assets
+under the same rule: they must be kept current when the product scope,
+architecture, deployment model, workflow, or tooling changes. When the product
+stack, critical modules, quality requirements, or CI configuration change,
+update this document and the linked quality assets so they keep describing the
+current completion standard.

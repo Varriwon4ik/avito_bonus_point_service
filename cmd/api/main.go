@@ -28,6 +28,8 @@ type config struct {
 	port             int
 	dsn              string
 	defaultTTLDays   int
+	minTTLDays       int
+	maxTTLDays       int
 	holdTimeoutHours int
 }
 
@@ -43,6 +45,20 @@ func main() {
 		}
 	}
 	flag.IntVar(&cfg.defaultTTLDays, "default-ttl-days", defaultTTL, "default lifetime of accrued points, in days")
+	minTTL := 1
+	if v := os.Getenv("MIN_TTL_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			minTTL = n
+		}
+	}
+	flag.IntVar(&cfg.minTTLDays, "min-ttl-days", minTTL, "minimum allowed ttl_days for accrual requests")
+	maxTTL := 1825
+	if v := os.Getenv("MAX_TTL_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			maxTTL = n
+		}
+	}
+	flag.IntVar(&cfg.maxTTLDays, "max-ttl-days", maxTTL, "maximum allowed ttl_days for accrual requests")
 	holdTimeoutHours := 24
 	if v := os.Getenv("HOLD_TIMEOUT_HOURS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
@@ -74,7 +90,7 @@ func main() {
 	logger.Info("database ready")
 
 	store := data.NewStore(db)
-	apiServer := api.NewServer(store, logger, cfg.defaultTTLDays)
+	apiServer := api.NewServer(store, logger, cfg.defaultTTLDays, cfg.minTTLDays, cfg.maxTTLDays)
 
 	go runHoldSweep(context.Background(), store, cfg.holdTimeoutHours, logger)
 
@@ -99,6 +115,7 @@ func main() {
 	}
 
 	logger.Info("starting server", "port", cfg.port, "default_ttl_days", cfg.defaultTTLDays,
+		"min_ttl_days", cfg.minTTLDays, "max_ttl_days", cfg.maxTTLDays,
 		"hold_timeout_hours", cfg.holdTimeoutHours)
 	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {

@@ -53,7 +53,7 @@ percentages are printed by the *"Per-module coverage gate (QRT-003)"* step and t
 
 | Test type | Scope | Command or CI check | Latest result | Evidence |
 |---|---|---|---|---|
-| Unit tests | Hold lifecycle / data logic (`internal/data`) | `go test ./internal/data/...` | Passing | [holds_test.go](../internal/data/holds_test.go) |
+| Unit tests | Hold lifecycle / data logic, label validation (`internal/data`) | `go test ./internal/data/...` | Passing | [holds_test.go](../internal/data/holds_test.go), [labels_test.go](../internal/data/labels_test.go) |
 | Integration tests | API + Postgres: accrual, balance, hold/confirm/cancel, debit, idempotency, FIFO-by-expiry, pagination, error envelope, OpenAPI routes, metrics | `go test ./internal/api/... -race -p 1` | Passing | [integration_test.go](../internal/api/integration_test.go), [pagination_test.go](../internal/api/pagination_test.go), [metrics_integration_test.go](../internal/api/metrics_integration_test.go) |
 | Concurrency tests | Race-safety / no double-spend under concurrent debits & holds | `go test ./internal/api/... -race` | Passing | [concurrent_idempotency_test.go](../internal/api/concurrent_idempotency_test.go) |
 | Automated QRTs | QR-001, QR-002, QR-003 | `go test ./internal/api/ -run TestQRT` + `bash scripts/coverage_gate.sh` | Passing | [qrt_test.go](../internal/api/qrt_test.go), [quality-requirement-tests.md](quality-requirement-tests.md) |
@@ -92,12 +92,21 @@ runs as its own CI job.
 |---|---|---|---|
 | Customer UAT (code-walkthrough session, 28 Jun 2026) | Sprint 2 increment: CI (US-14), autotester (US-15), pagination (US-09) | Passed — customer satisfied with the team's design decisions | See [docs/user-acceptance-tests.md](user-acceptance-tests.md) |
 | Sprint Review file-by-file inspection | All files committed during Sprint 2 | Approved by the customer | [Sprint 2 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2) |
+| Customer UAT (customer-directed screen-share session, 3 Jul 2026) | Sprint 3 / MVP v2 increment: UAT-004 (US-16), UAT-005 (US-17), UAT-006 (US-18 + US-08) | All passed — features accepted; new backlog item raised | [US-19 / #50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50); see [docs/user-acceptance-tests.md](user-acceptance-tests.md) |
 
 ## Notes on excluded links
 
-The deployed increment runs on a University VM at a private (RFC 1918) address
-that is unreachable from GitHub-hosted CI, so its URL is excluded from Lychee in
-[`.lycheeignore`](../.lycheeignore) and verified manually before submission.
+Every exclusion in [`.lycheeignore`](../.lycheeignore) is narrow, justified,
+and manually verified before submission:
+
+- The deployed increment runs on a University VM at a private (RFC 1918)
+  address that is unreachable from GitHub-hosted CI.
+- The Google Drive demo-video links are session-gated by Drive and rate-limited
+  for CI runners; they are verified manually in a browser.
+- The GitHub Pages documentation site URL is excluded until the first Pages
+  deployment from `main` completes (the site deploys on merge, so PR CI would
+  otherwise fail on a not-yet-published URL); it is verified manually after
+  deployment.
 
 ## Gates that remain active for later project work
 

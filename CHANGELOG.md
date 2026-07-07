@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-05
+
+MVP v2 — the Sprint 3 increment (Assignment 5, 29 Jun–5 Jul 2026). Maps to the
+[Sprint 3 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3):
+US-08, US-16, US-17, US-18, plus the maintained architecture and
+development-process documentation.
+
+### Added
+
+- **Web autotester tab and run endpoint (US-17).** A new "Autotester" tab in the
+  web UI lets an administrator fill in a scenario (label, test user, amount, TTL,
+  parallel requests) and run it against the live instance, then see a per-check
+  pass/fail report. It is backed by a new `POST /v1/autotest/run` endpoint and a
+  shared `internal/autotest` engine extracted from the `cmd/autotest` console
+  tool, so the web and console front ends run identical accrual-correctness and
+  parallel-request checks. All requests target a dedicated `autotest-`-prefixed
+  user so real accounts are never touched. (#40, PR #49)
+- **Exact HTTP response codes in the web UI (US-16).** Accrual and debit
+  operations in the web UI now display the exact HTTP status code and outcome of
+  each request (e.g. green `200` on success, red `404` for an unknown user)
+  alongside the other request details, so administrators can report issues
+  precisely without backend tooling. (#39, PR #46)
+- **Labels on transactions (US-18).** Accruals can carry a label — a preset
+  value such as `test` or `real`, or a custom short label — which is validated
+  (trimmed, ≤ 32 characters, no control characters), stored on the ledger entry
+  (migration `0004`), and displayed in the web UI transactions view, so test and
+  real traffic can be told apart. First landed in PR #44, reverted in PR #47
+  after issues surfaced, and re-landed fixed in PR #49. (#41)
+- **Configurable per-accrual TTL validation and bounds (US-08).** New
+  `MIN_TTL_DAYS` / `MAX_TTL_DAYS` environment variables bound the accepted
+  `ttl_days` on accruals; requests outside the configured range return
+  `400 Bad Request` with a clear message, protecting expiry logic from absurd
+  lifetimes. `DEFAULT_TTL_DAYS` behaviour is unchanged when `ttl_days` is
+  omitted. (#5, PR #42)
+- **Maintained architecture and process documentation (Assignment 5).**
+  Architecture documentation with static, dynamic, and deployment views and five
+  ADRs (`docs/architecture/`), the documented development process and
+  configuration management (`docs/development-process.md`), and a hosted MkDocs
+  documentation site published to GitHub Pages on every merge to `main`. (#51)
+
 ## [1.1.0] - 2026-06-28
 
 Sprint 2 increment (Assignment 4, 22–28 Jun 2026). Maps to the
@@ -79,6 +119,7 @@ MVP v1 — the first delivered increment (Sprint 1, 15–21 Jun 2026). Maps to t
   status codes (200/201/400/404/409/500) with a consistent JSON error envelope,
   and the OpenAPI specification was updated to match. (#12, PR #15)
 
-[Unreleased]: https://github.com/Varriwon4ik/avito_bonus_point_service/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Varriwon4ik/avito_bonus_point_service/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.0.0
 [1.1.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.0.0

@@ -2,3 +2,6 @@
 *.test
 *.out
 .env
+# MkDocs build output (built in CI, never committed)
+site/
+_site/

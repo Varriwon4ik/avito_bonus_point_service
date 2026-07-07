@@ -1,0 +1,35 @@
+%% Static view — component diagram (diagrams-as-code source of truth).
+%% Rendered in context in docs/architecture/README.md (same Mermaid code).
+%% Update this file and the embedded copy together.
+flowchart LR
+    subgraph external ["External actors and systems"]
+        storesvc["Integrating store services<br/>(checkout, loyalty, support tooling)"]
+        operator["Administrator / support operator<br/>(browser)"]
+        prom["Prometheus scraper<br/>(internal, optional)"]
+    end
+
+    subgraph binary ["Bonus Points Ledger Service — one Go binary (cmd/api)"]
+        webui["Web UI<br/>static HTML/JS (cmd/api/web)<br/>Accrue / Debit / Transactions / Autotester tabs"]
+        swagger["Swagger UI + OpenAPI spec<br/>GET /docs, GET /openapi.yaml (api/openapi.yaml)"]
+        mw["Observability middleware (internal/api)<br/>structured logs + request metrics<br/>never reads request bodies"]
+        handlers["HTTP handlers (internal/api)<br/>routing, validation, error envelope,<br/>TTL bounds, pagination, labels"]
+        metrics["Metrics registry (internal/api)<br/>GET /metrics gauges + histograms"]
+        engine["Autotest engine (internal/autotest)<br/>accrual-correctness + parallel checks,<br/>forces autotest- user prefix"]
+        store["Ledger store (internal/data)<br/>transactions, SELECT ... FOR UPDATE,<br/>FIFO-by-expiry, idempotency cache,<br/>hold lifecycle, SQL migrations"]
+    end
+
+    cli["cmd/autotest console tool"]
+    pg[("PostgreSQL 16<br/>points_lots, holds, hold_allocations,<br/>ledger_entries, idempotency_keys,<br/>autotest_scenarios")]
+
+    storesvc -- "HTTP/JSON /v1/*" --> mw
+    operator -- "HTTP" --> webui
+    operator -- "HTTP" --> swagger
+    webui -- "fetch /v1/*" --> mw
+    prom -- "GET /metrics" --> mw
+    mw --> handlers
+    handlers --> store
+    handlers -- "POST /v1/autotest/run" --> engine
+    engine -- "HTTP against the live /v1 API" --> mw
+    cli -- "HTTP /v1/*" --> mw
+    handlers --> metrics
+    store -- "SQL in transactions" --> pg

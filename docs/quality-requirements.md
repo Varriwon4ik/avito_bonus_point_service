@@ -2,7 +2,7 @@
 
 This document defines the measurable, non-functional quality requirements (QRs)
 for the Bonus Points Ledger Service. Each QR uses a distinct
-[ISO/IEC 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010)
+[ISO/IEC 25010](https://en.wikipedia.org/wiki/ISO/IEC_25010)
 quality sub-characteristic, states a measurable scenario, explains why it
 matters, and links to the automated quality requirement test(s) that verify it.
 
@@ -11,7 +11,13 @@ Quality requirements and their tests are **maintained product assets** (per
 them when product scope or risk changes, rather than disabling them after the
 assignment is submitted.
 
+Starting with Assignment 5, each quality requirement also links to the
+[Architecture Decision Record(s)](architecture/README.md#architecture-decision-records-adr-index)
+that address it, so the *requirement → decision → automated test* chain is
+traceable in both directions.
+
 - Linked tests: [docs/quality-requirement-tests.md](quality-requirement-tests.md)
+- Architecture documentation and ADRs: [docs/architecture/README.md](architecture/README.md)
 - Testing status & coverage: [docs/testing.md](testing.md)
 - Completion standard: [docs/definition-of-done.md](definition-of-done.md)
 
@@ -26,11 +32,11 @@ the <artifact> shall <response> within <response measure>.
 
 ## Summary
 
-| QR | ISO/IEC 25010 sub-characteristic | Verified by |
-|---|---|---|
-| QR-001 | Time behaviour (Performance efficiency) | [QRT-001](quality-requirement-tests.md#qrt-001-balance-read-response-time) |
-| QR-002 | Integrity (Security) | [QRT-002](quality-requirement-tests.md#qrt-002-debit-integrity-under-concurrency) |
-| QR-003 | Testability (Maintainability) | [QRT-003](quality-requirement-tests.md#qrt-003-critical-module-line-coverage) |
+| QR | ISO/IEC 25010 sub-characteristic | Verified by | Addressed by ADR(s) |
+|---|---|---|---|
+| QR-001 | Time behaviour (Performance efficiency) | [QRT-001](quality-requirement-tests.md#qrt-001-balance-read-response-time) | [ADR-002](architecture/adr/ADR-002-lazy-expiry-and-fifo-by-expiry-consumption.md) |
+| QR-002 | Integrity (Security) | [QRT-002](quality-requirement-tests.md#qrt-002-debit-integrity-under-concurrency) | [ADR-001](architecture/adr/ADR-001-postgres-row-locking-for-ledger-integrity.md), [ADR-004](architecture/adr/ADR-004-client-supplied-idempotency-keys.md) |
+| QR-003 | Testability (Maintainability) | [QRT-003](quality-requirement-tests.md#qrt-003-critical-module-line-coverage) | [ADR-003](architecture/adr/ADR-003-layered-monolith-with-gated-critical-modules.md), [ADR-005](architecture/adr/ADR-005-single-binary-web-ui-and-compose-deployment.md) |
 
 ## QR-001: Balance read response time
 
@@ -52,6 +58,11 @@ main user workflow rather than relying on a vague "fast" goal.
 
 **Linked quality requirement tests:**
 [QRT-001](quality-requirement-tests.md#qrt-001-balance-read-response-time)
+
+**Linked architecture decisions:**
+[ADR-002 — Lazy point expiry and FIFO-by-expiry consumption](architecture/adr/ADR-002-lazy-expiry-and-fifo-by-expiry-consumption.md)
+keeps the balance read a single indexed query with no background-job coupling,
+which is what makes this latency budget achievable.
 
 ## QR-002: Ledger integrity under concurrency
 
@@ -78,6 +89,12 @@ under the race detector.
 **Linked quality requirement tests:**
 [QRT-002](quality-requirement-tests.md#qrt-002-debit-integrity-under-concurrency)
 
+**Linked architecture decisions:**
+[ADR-001 — Serialize balance mutations with `SELECT ... FOR UPDATE`](architecture/adr/ADR-001-postgres-row-locking-for-ledger-integrity.md)
+provides the no-lost-update / no-double-spend mechanism, and
+[ADR-004 — Client-supplied idempotency keys](architecture/adr/ADR-004-client-supplied-idempotency-keys.md)
+extends the same guarantee across client retries and crashes.
+
 ## QR-003: Critical module testability
 
 **ISO/IEC 25010 sub-characteristic:** Testability (Maintainability)
@@ -102,3 +119,10 @@ otherwise.
 
 **Linked quality requirement tests:**
 [QRT-003](quality-requirement-tests.md#qrt-003-critical-module-line-coverage)
+
+**Linked architecture decisions:**
+[ADR-003 — Layered monolith with coverage-gated critical modules](architecture/adr/ADR-003-layered-monolith-with-gated-critical-modules.md)
+defines the module boundaries this requirement gates, and
+[ADR-005 — One binary serves API, web UI, and autotester](architecture/adr/ADR-005-single-binary-web-ui-and-compose-deployment.md)
+keeps all frontends on the same tested public API and a single shared autotest
+engine.
