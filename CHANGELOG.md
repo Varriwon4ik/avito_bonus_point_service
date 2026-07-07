@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Web autotester always reported "Autotester found issues" (US-17).** The
+  Autotester tab read the pass/fail verdict from the HTTP wrapper object instead
+  of the response body, so `passed` was always `undefined` and every run — even
+  a fully successful one with code 200 — showed "✗ Some checks failed" with an
+  empty per-check table. The tab now unwraps the response body before rendering
+  the verdict and surfaces API validation errors (HTTP 4xx) as their own toast
+  message. (#54)
+
 ## [2.0.0] - 2026-07-05
 
 MVP v2 — the Sprint 3 increment (Assignment 5, 29 Jun–5 Jul 2026). Maps to the

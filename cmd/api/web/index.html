@@ -378,8 +378,14 @@ function runAutotest() {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload)
-  }).then(function(res) {
+  }).then(function(r) {
+    var res = r.body || {};
     document.getElementById('at-result').textContent = JSON.stringify(res, null, 2);
+    if (!r.ok) {
+      var msg = res.message || res.error || ('HTTP ' + r.status);
+      showToast(msg, true);
+      return;
+    }
     document.getElementById('at-summary-card').style.display = '';
     var verdict = document.getElementById('at-verdict');
     verdict.textContent = res.passed ? '✓ All checks passed' : '✗ Some checks failed';
