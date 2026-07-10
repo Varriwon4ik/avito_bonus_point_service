@@ -544,11 +544,15 @@ func TestExpiryOrdering(t *testing.T) {
 		t.Fatalf("get lots: %v", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("get lots: want 200, got %d", resp.StatusCode)
+	}
 
-	var lotList []data.LotInfo
-	if err := json.NewDecoder(resp.Body).Decode(&lotList); err != nil {
+	var payload data.PaginatedLots
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode lots: %v", err)
 	}
+	lotList := payload.Lots
 
 	var shortLotRemaining, longLotRemaining int
 	for _, l := range lotList {

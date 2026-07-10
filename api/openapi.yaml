@@ -138,18 +138,46 @@ paths:
     get:
       tags: [Lots]
       summary: List the user's points lots
-      description: Implemented in MVP v0.
+      description: Lists the user's point lots ordered by soonest expiry first using page/offset pagination, with an optional support-facing status filter.
       parameters:
         - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+          description: 1-based page number
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 20
+            example: 20
+          description: Number of lots per page
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, expired, exhausted]
+            example: active
+          description: Optional lot-status filter. `active` returns non-expired lots with remaining points, `expired` returns lots whose expiry has passed, and `exhausted` returns non-expired lots with zero remaining points.
       responses:
         '200':
           description: Lots returned successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LotInfo'
+                $ref: '#/components/schemas/PaginatedLots'
+        '400':
+          description: Invalid `page`, `offset`, or `status` value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: User not found
           content:
@@ -546,23 +574,54 @@ components:
           example: confirmed
     LotInfo:
       type: object
-      required: [lot_id, amount, remaining, expires_at, created_at]
+      required: [lot_id, user_id, amount, remaining, status, expires_at, created_at]
       properties:
         lot_id:
           type: integer
           example: 1
+        user_id:
+          type: string
+          example: user_123
         amount:
           type: integer
           example: 500
         remaining:
           type: integer
           example: 300
+        status:
+          type: string
+          enum: [active, expired, exhausted]
+          example: active
         expires_at:
           type: string
           format: date-time
         created_at:
           type: string
           format: date-time
+    PaginatedLots:
+      type: object
+      required: [user_id, page, offset, total, lots]
+      properties:
+        user_id:
+          type: string
+          example: user_123
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        offset:
+          type: integer
+          minimum: 1
+          maximum: 500
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          example: 42
+        lots:
+          type: array
+          items:
+            $ref: '#/components/schemas/LotInfo'
     LedgerEntry:
       type: object
       required: [id, user_id, type, amount, created_at]

@@ -613,15 +613,16 @@ function submitDebit() {
 
 function loadLots() {
   var u = currentUser();
-  api('/v1/users/' + encodeURIComponent(u) + '/lots').then(function(r) {
-    if (!r.ok) { showToast('Failed to load lots: HTTP ' + r.status, true); return; }
-    var lots = r.body || [];
-    var now = new Date();
+
+  function renderLots(lots) {
     var html = lots.map(function(l) {
       var exp = new Date(l.expires_at);
-      var expired = exp < now;
-      var cls = expired ? 'badge-gray' : (l.remaining === 0 ? 'badge-gray' : 'badge-success');
-      var label = expired ? 'expired' : (l.remaining === 0 ? 'depleted' : 'active');
+      var label = l.status;
+      if (!label) {
+        var now = new Date();
+        label = exp < now ? 'expired' : (l.remaining === 0 ? 'exhausted' : 'active');
+      }
+      var cls = label === 'active' ? 'badge-success' : 'badge-gray';
       return '<tr>' +
         '<td class="td-id">#' + l.lot_id + '</td>' +
         '<td class="pts-pos">+' + l.amount + '</td>' +
@@ -631,9 +632,30 @@ function loadLots() {
         '</tr>';
     }).join('');
     document.getElementById('lots-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No lots yet</td></tr>';
-  }).catch(function(e) {
-    showToast('Failed to load lots: ' + e.message, true);
-  });
+  }
+
+  function loadLotsPage(page, allLots) {
+    api('/v1/users/' + encodeURIComponent(u) + '/lots?page=' + page + '&offset=100').then(function(r) {
+      if (!r.ok) { showToast('Failed to load lots: HTTP ' + r.status, true); return; }
+      if (Array.isArray(r.body)) {
+        renderLots(r.body);
+        return;
+      }
+
+      var body = r.body || {};
+      var pageLots = body.lots || [];
+      var mergedLots = allLots.concat(pageLots);
+      if (mergedLots.length >= (body.total || 0) || pageLots.length === 0) {
+        renderLots(mergedLots);
+        return;
+      }
+      loadLotsPage(page + 1, mergedLots);
+    }).catch(function(e) {
+      showToast('Failed to load lots: ' + e.message, true);
+    });
+  }
+
+  loadLotsPage(1, []);
 }
 
 function loadLedger() {

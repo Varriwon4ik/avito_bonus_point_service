@@ -626,21 +626,44 @@ func (rt *Runtime) loadBalance(userID string) (data.BalanceResult, bool, error) 
 }
 
 func (rt *Runtime) loadLots(userID string) ([]data.LotInfo, error) {
-	var lots []data.LotInfo
-	status, apiErr, err := rt.doJSON(http.MethodGet, "/v1/users/"+url.PathEscape(userID)+"/lots", nil, &lots)
+	page := 1
+	offset := 100
+	var all []data.LotInfo
+
+	for {
+		lotsPage, exists, err := rt.loadLotsPage(userID, page, offset)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, nil
+		}
+
+		all = append(all, lotsPage.Lots...)
+		if len(all) >= lotsPage.Total || len(lotsPage.Lots) == 0 {
+			return all, nil
+		}
+		page++
+	}
+}
+
+func (rt *Runtime) loadLotsPage(userID string, page, offset int) (data.PaginatedLots, bool, error) {
+	result := data.PaginatedLots{UserID: userID, Page: page, Offset: offset, Lots: []data.LotInfo{}}
+	path := fmt.Sprintf("/v1/users/%s/lots?page=%d&offset=%d", url.PathEscape(userID), page, offset)
+	status, apiErr, err := rt.doJSON(http.MethodGet, path, nil, &result)
 	if err != nil {
-		return nil, err
+		return result, false, err
 	}
 	switch status {
 	case http.StatusOK:
-		return lots, nil
+		return result, true, nil
 	case http.StatusNotFound:
 		if apiErr.Message == data.ErrUserNotFound.Error() {
-			return nil, nil
+			return result, false, nil
 		}
-		return nil, fmt.Errorf("lots lookup returned 404: %s", apiErr.Message)
+		return result, false, fmt.Errorf("lots lookup returned 404: %s", apiErr.Message)
 	default:
-		return nil, fmt.Errorf("lots lookup returned status %d: %s %s", status, apiErr.Error, apiErr.Message)
+		return result, false, fmt.Errorf("lots lookup returned status %d: %s %s", status, apiErr.Error, apiErr.Message)
 	}
 }
 
