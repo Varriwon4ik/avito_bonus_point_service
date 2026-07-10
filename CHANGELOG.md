@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   supports `status=active|expired|exhausted`, so support tooling can explain a
   user's balance lot-by-lot without relying on the web dashboard's old raw-list
   response. Invalid pagination or status filters return `400 Bad Request`. (#2)
+### Fixed
+
+- **Web autotester always reported "Autotester found issues" (US-17).** The
+  Autotester tab read the pass/fail verdict from the HTTP wrapper object instead
+  of the response body, so `passed` was always `undefined` and every run — even
+  a fully successful one with code 200 — showed "✗ Some checks failed" with an
+  empty per-check table. The tab now unwraps the response body before rendering
+  the verdict and surfaces API validation errors (HTTP 4xx) as their own toast
+  message. (#54)
 
 ## [2.0.0] - 2026-07-05
 
