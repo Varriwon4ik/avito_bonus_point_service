@@ -153,16 +153,13 @@ func (s *Server) handleBatchAccrue(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		ttl := s.DefaultTTLDays
-		if item.TTLDays != nil {
-			if *item.TTLDays <= 0 {
-				result["status"] = "error"
-				result["error"] = "bad_request"
-				result["message"] = "ttl_days must be a positive integer"
-				results = append(results, result)
-				continue
-			}
-			ttl = *item.TTLDays
+		ttl, err := s.resolveTTLDays(item.TTLDays)
+		if err != nil {
+			result["status"] = "error"
+			result["error"] = "bad_request"
+			result["message"] = err.Error()
+			results = append(results, result)
+			continue
 		}
 
 		label := ""
@@ -195,12 +192,13 @@ func (s *Server) handleBatchAccrue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) batchErrorCode(err error) string {
+	var invalidLabelErr *data.InvalidLabelError
 	switch {
 	case err == nil:
 		return ""
 	case errors.Is(err, data.ErrInsufficientFunds), errors.Is(err, data.ErrIdempotencyConflict):
 		return "conflict"
-	case errors.Is(err, data.ErrInvalidAmount):
+	case errors.Is(err, data.ErrInvalidAmount), errors.As(err, &invalidLabelErr):
 		return "bad_request"
 	case errors.Is(err, data.ErrUserNotFound), errors.Is(err, data.ErrHoldNotFound):
 		return "not_found"

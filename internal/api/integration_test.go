@@ -379,6 +379,8 @@ func TestBatchAccrualsReturnPerItemResults(t *testing.T) {
 			{"user_id": userA, "amount": 100, "ttl_days": 30, "idempotency_key": "batch-a"},
 			{"user_id": userB, "amount": 200, "ttl_days": 45, "idempotency_key": "batch-b"},
 			{"user_id": "", "amount": 50, "ttl_days": 15, "idempotency_key": "batch-c"},
+			{"user_id": "batch_user_d", "amount": 10, "ttl_days": 4000, "idempotency_key": "batch-d"},
+			{"user_id": "batch_user_e", "amount": 10, "idempotency_key": "batch-e", "label": "bad|label"},
 		},
 	})
 	if status != http.StatusMultiStatus {
@@ -387,8 +389,8 @@ func TestBatchAccrualsReturnPerItemResults(t *testing.T) {
 	assertJSONContentType(t, header)
 
 	results, ok := body["results"].([]any)
-	if !ok || len(results) != 3 {
-		t.Fatalf("expected 3 batch results, got %v", body["results"])
+	if !ok || len(results) != 5 {
+		t.Fatalf("expected 5 batch results, got %v", body["results"])
 	}
 
 	first, ok := results[0].(map[string]any)
@@ -402,6 +404,14 @@ func TestBatchAccrualsReturnPerItemResults(t *testing.T) {
 	third, ok := results[2].(map[string]any)
 	if !ok || third["status"] != "error" {
 		t.Fatalf("expected third item to fail, got %v", results[2])
+	}
+	fourth, ok := results[3].(map[string]any)
+	if !ok || fourth["status"] != "error" || fourth["error"] != "bad_request" {
+		t.Fatalf("expected fourth item to fail ttl bounds validation, got %v", results[3])
+	}
+	fifth, ok := results[4].(map[string]any)
+	if !ok || fifth["status"] != "error" || fifth["error"] != "bad_request" {
+		t.Fatalf("expected fifth item to fail label validation with bad_request, got %v", results[4])
 	}
 
 	status, _, balanceA := doJSON(t, http.MethodGet, env.Server.URL+"/v1/users/"+userA+"/balance", nil)
