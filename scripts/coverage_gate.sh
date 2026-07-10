@@ -27,18 +27,25 @@ fi
 # Aggregate covered/total statements per package from the coverage profile.
 # Profile line format:
 #   <import/path/file.go>:<startLine.col>,<endLine.col> <numStmts> <count>
+# With -coverpkg, every test binary in the run emits its own copy of each
+# instrumented block, so the same block appears once per test binary. Count
+# each unique block once and treat it as covered if any binary executed it.
 BY_PKG="$(mktemp)"
 trap 'rm -f "$BY_PKG"' EXIT
 
 awk '
   NR == 1 { next }                      # skip "mode:" header line
   {
-    file = $1; sub(/:.*/, "", file)     # strip ":line.col,line.col"
-    pkg  = file; sub(/\/[^/]+$/, "", pkg)  # package import path = dir of file
-    stmts[pkg]   += $2
-    if ($3 + 0 > 0) covered[pkg] += $2
+    block_stmts[$1] = $2
+    if ($3 + 0 > 0) block_hit[$1] = 1
   }
   END {
+    for (b in block_stmts) {
+      file = b; sub(/:.*/, "", file)    # strip ":line.col,line.col"
+      pkg  = file; sub(/\/[^/]+$/, "", pkg)  # package import path = dir of file
+      stmts[pkg] += block_stmts[b]
+      if (b in block_hit) covered[pkg] += block_stmts[b]
+    }
     for (p in stmts) {
       pct = (stmts[p] > 0) ? (covered[p] / stmts[p]) * 100 : 0
       printf "%s %d %d %.1f\n", p, covered[p] + 0, stmts[p], pct
