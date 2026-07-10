@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +11,7 @@ import (
 )
 
 func (s *Server) routes() {
+	s.Mux.HandleFunc("POST /v1/accruals/batch", s.handleBatchAccrue)
 	s.Mux.HandleFunc("POST /v1/users/{id}/accruals", s.handleAccrue)
 	s.Mux.HandleFunc("GET /v1/users/{id}/balance", s.handleBalance)
 	s.Mux.HandleFunc("GET /v1/users/{id}/lots", s.handleListLots)
@@ -56,6 +59,18 @@ type accrueRequest struct {
 	Label          *string `json:"label,omitempty"`
 }
 
+type batchAccrualRequest struct {
+	Items []batchAccrualItem `json:"items"`
+}
+
+type batchAccrualItem struct {
+	UserID         *string `json:"user_id"`
+	Amount         *int    `json:"amount"`
+	TTLDays        *int    `json:"ttl_days,omitempty"`
+	IdempotencyKey *string `json:"idempotency_key"`
+	Label          *string `json:"label,omitempty"`
+}
+
 // handleAccrue implements "по каждому пользователю можно добавить бонусные
 // баллы" with a configurable (and optionally per-request) lifetime, and is
 // idempotent via idempotency_key.
@@ -93,6 +108,103 @@ func (s *Server) handleAccrue(w http.ResponseWriter, r *http.Request) {
 
 	status, body, err := s.Store.AccrueWithLabel(r.Context(), userID, *req.Amount, ttl, strings.TrimSpace(*req.IdempotencyKey), label)
 	s.respond(w, status, body, err)
+}
+
+func (s *Server) handleBatchAccrue(w http.ResponseWriter, r *http.Request) {
+	var req batchAccrualRequest
+	if err := readJSON(w, r, &req); err != nil {
+		badRequest(w, err.Error())
+		return
+	}
+	if len(req.Items) == 0 {
+		badRequest(w, "items must not be empty")
+		return
+	}
+
+	results := make([]map[string]any, 0, len(req.Items))
+	for idx, item := range req.Items {
+		result := map[string]any{"index": idx}
+		if item.UserID == nil || strings.TrimSpace(*item.UserID) == "" {
+			result["status"] = "error"
+			result["error"] = "bad_request"
+			result["message"] = "user_id is required"
+			results = append(results, result)
+			continue
+		}
+		if item.Amount == nil {
+			result["status"] = "error"
+			result["error"] = "bad_request"
+			result["message"] = "amount is required"
+			results = append(results, result)
+			continue
+		}
+		if item.IdempotencyKey == nil || strings.TrimSpace(*item.IdempotencyKey) == "" {
+			result["status"] = "error"
+			result["error"] = "bad_request"
+			result["message"] = "idempotency_key is required"
+			results = append(results, result)
+			continue
+		}
+		if *item.Amount <= 0 {
+			result["status"] = "error"
+			result["error"] = "bad_request"
+			result["message"] = "amount must be a positive integer"
+			results = append(results, result)
+			continue
+		}
+
+		ttl, err := s.resolveTTLDays(item.TTLDays)
+		if err != nil {
+			result["status"] = "error"
+			result["error"] = "bad_request"
+			result["message"] = err.Error()
+			results = append(results, result)
+			continue
+		}
+
+		label := ""
+		if item.Label != nil {
+			label = strings.TrimSpace(*item.Label)
+		}
+
+		_, body, err := s.Store.AccrueWithLabel(r.Context(), strings.TrimSpace(*item.UserID), *item.Amount, ttl, strings.TrimSpace(*item.IdempotencyKey), label)
+		if err != nil {
+			result["status"] = "error"
+			result["error"] = s.batchErrorCode(err)
+			result["message"] = err.Error()
+			results = append(results, result)
+			continue
+		}
+
+		var payload any
+		if len(body) > 0 {
+			if err := json.Unmarshal(body, &payload); err != nil {
+				payload = string(body)
+			}
+		}
+		result["status"] = "created"
+		result["result"] = payload
+		result["user_id"] = strings.TrimSpace(*item.UserID)
+		results = append(results, result)
+	}
+
+	writeJSON(w, http.StatusMultiStatus, map[string]any{"results": results})
+}
+
+func (s *Server) batchErrorCode(err error) string {
+	var invalidLabelErr *data.InvalidLabelError
+	switch {
+	case err == nil:
+		return ""
+	case errors.Is(err, data.ErrInsufficientFunds), errors.Is(err, data.ErrIdempotencyConflict):
+		return "conflict"
+	case errors.Is(err, data.ErrInvalidAmount), errors.As(err, &invalidLabelErr):
+		return "bad_request"
+	case errors.Is(err, data.ErrUserNotFound), errors.Is(err, data.ErrHoldNotFound):
+		return "not_found"
+	default:
+		return "internal_server_error"
+	}
 }
 
 // handleBalance implements "по каждому пользователю можно узнать сколько у
