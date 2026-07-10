@@ -14,6 +14,12 @@ var (
 	ErrIdempotencyConflict = errors.New("a request with this idempotency key is already in progress")
 )
 
+const (
+	LotStatusActive    = "active"
+	LotStatusExpired   = "expired"
+	LotStatusExhausted = "exhausted"
+)
+
 // AccrualResult is returned after points are credited to a user's account.
 type AccrualResult struct {
 	LotID     int64     `json:"lot_id"`
@@ -72,10 +78,21 @@ type PaginatedLedger struct {
 // LotInfo describes a single batch of accrued points and its remaining balance.
 type LotInfo struct {
 	LotID     int64     `json:"lot_id"`
+	UserID    string    `json:"user_id"`
 	Amount    int       `json:"amount"`
 	Remaining int       `json:"remaining"`
+	Status    string    `json:"status"`
 	ExpiresAt time.Time `json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// PaginatedLots wraps a page of lot audit rows with pagination metadata.
+type PaginatedLots struct {
+	UserID string    `json:"user_id"`
+	Page   int       `json:"page"`
+	Offset int       `json:"offset"`
+	Total  int       `json:"total"`
+	Lots   []LotInfo `json:"lots"`
 }
 
 // AutotestScenario stores a reusable US-15 autotest definition in the DB.
