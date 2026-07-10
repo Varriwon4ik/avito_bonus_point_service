@@ -14,8 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   supports `status=active|expired|exhausted`, so support tooling can explain a
   user's balance lot-by-lot without relying on the web dashboard's old raw-list
   response. Invalid pagination or status filters return `400 Bad Request`. (#2)
+- **Bulk accrual in the web UI.** The Accrue Points tab now has a "Bulk accrual"
+  card — a row editor (user, amount, optional TTL, idempotency key, optional
+  label) that submits all rows to the existing `POST /v1/accruals/batch`
+  endpoint and renders the per-item multi-status results, so points can be
+  granted to several users at once from the browser. The endpoint itself shipped
+  in PR #57 without a front end. (#1)
+
 ### Fixed
 
+- **Web autotester ran the US-19 multi-key test on every run.** PR #55 added the
+  multi-key parallel accrual check to the shared check list, so the web
+  autotester ran it on every request with no way to opt out — the intended mode
+  switch was never built. The Autotester tab now has a "Test mode" selector,
+  backed by a new optional `mode` field on `POST /v1/autotest/run`: the default
+  `single` mode runs the original correctness and parallel-burst checks, and the
+  US-19 multi-key check runs only when `multi_key` is selected explicitly. The
+  `cmd/autotest` console tool is unchanged. (#50)
 - **Web autotester always reported "Autotester found issues" (US-17).** The
   Autotester tab read the pass/fail verdict from the HTTP wrapper object instead
   of the response body, so `passed` was always `undefined` and every run — even

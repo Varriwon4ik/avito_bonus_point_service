@@ -16,6 +16,7 @@ type autotestRunRequest struct {
 	Amount           *int   `json:"amount"`
 	TTLDays          *int   `json:"ttl_days,omitempty"`
 	ParallelRequests *int   `json:"parallel_requests,omitempty"`
+	Mode             string `json:"mode,omitempty"`
 }
 
 type autotestCheckResult struct {
@@ -38,6 +39,7 @@ type autotestScenarioEcho struct {
 
 type autotestRunResponse struct {
 	Scenario autotestScenarioEcho  `json:"scenario"`
+	Mode     string                `json:"mode"`
 	Passed   bool                  `json:"passed"`
 	Results  []autotestCheckResult `json:"results"`
 }
@@ -53,6 +55,19 @@ func (s *Server) handleAutotestRun(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Amount == nil {
 		badRequest(w, "amount is required")
+		return
+	}
+
+	var checks []autotest.Check
+	mode := req.Mode
+	switch mode {
+	case "", "single":
+		mode = "single"
+		checks = autotest.SingleKeyChecks()
+	case "multi_key":
+		checks = autotest.MultiKeyChecks()
+	default:
+		badRequest(w, "mode must be \"single\" or \"multi_key\"")
 		return
 	}
 
@@ -92,9 +107,10 @@ func (s *Server) handleAutotestRun(w http.ResponseWriter, r *http.Request) {
 			ParallelRequests: scn.ParallelRequests,
 			LedgerLabel:      scn.LedgerLabel,
 		},
+		Mode:   mode,
 		Passed: true,
 	}
-	for _, check := range autotest.Checks() {
+	for _, check := range checks {
 		result := autotestCheckResult{Name: check.Name, Passed: true}
 		if err := check.Run(rt, scn); err != nil {
 			result.Passed = false

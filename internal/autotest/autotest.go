@@ -88,14 +88,28 @@ type Check struct {
 	Run  func(*Runtime, data.AutotestScenario) error
 }
 
-// Checks returns the ordered set of checks the autotester runs, matching the
-// options exposed by the cmd/autotest console tool.
-func Checks() []Check {
+// SingleKeyChecks returns the checks where every request burst shares a single
+// idempotency key — the default suite for a web autotester run.
+func SingleKeyChecks() []Check {
 	return []Check{
 		{Name: "accrual correctness", Run: RunAccrualCorrectness},
 		{Name: "parallel accrual", Run: RunParallelAccrual},
+	}
+}
+
+// MultiKeyChecks returns the US-19 checks that fire N parallel requests with N
+// distinct idempotency keys; the web autotester runs them only when the
+// multi-key mode is explicitly selected.
+func MultiKeyChecks() []Check {
+	return []Check{
 		{Name: "multi-key parallel accrual", Run: RunMultiKeyParallelAccrual},
 	}
+}
+
+// Checks returns the full ordered set of checks, matching the options exposed
+// by the cmd/autotest console tool.
+func Checks() []Check {
+	return append(SingleKeyChecks(), MultiKeyChecks()...)
 }
 
 // Validate rejects scenarios that would touch real accounts or exercise the
