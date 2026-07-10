@@ -92,35 +92,79 @@ func (s *Store) Balance(ctx context.Context, userID string, expiringWithinDays i
 	return res, nil
 }
 
-// ListLots returns every lot for a user (including expired/depleted ones)
-// ordered by expiry date, oldest first.
-func (s *Store) ListLots(ctx context.Context, userID string) ([]LotInfo, error) {
-	exists, err := userExists(ctx, s.DB, userID)
-	if err != nil {
-		return nil, err
+func classifyLotStatus(expiresAt time.Time, remaining int, now time.Time) string {
+	if !expiresAt.After(now) {
+		return LotStatusExpired
 	}
-	if !exists {
-		return nil, ErrUserNotFound
+	if remaining == 0 {
+		return LotStatusExhausted
+	}
+	return LotStatusActive
+}
+
+// ListLots returns a single page of lot-audit rows for a user ordered by
+// expiry date, oldest first. The optional status filter uses the support/API
+// semantics:
+//   - active: non-expired lots with remaining points
+//   - expired: any lot whose expiry has passed
+//   - exhausted: non-expired lots with zero remaining points
+func (s *Store) ListLots(ctx context.Context, userID string, page, offset int, status string) (PaginatedLots, error) {
+	result := PaginatedLots{
+		UserID: userID,
+		Page:   page,
+		Offset: offset,
+		Lots:   []LotInfo{},
 	}
 
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, amount, remaining, expires_at, created_at FROM points_lots
-		WHERE user_id = $1
-		ORDER BY expires_at ASC, id ASC`, userID)
+	exists, err := userExists(ctx, s.DB, userID)
 	if err != nil {
-		return nil, err
+		return result, err
+	}
+	if !exists {
+		return result, ErrUserNotFound
+	}
+
+	now := time.Now().UTC()
+
+	if err := s.DB.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM points_lots
+		WHERE user_id = $1
+		  AND (
+			$2 = ''
+			OR ($2 = 'active' AND expires_at > $3 AND remaining > 0)
+			OR ($2 = 'expired' AND expires_at <= $3)
+			OR ($2 = 'exhausted' AND expires_at > $3 AND remaining = 0)
+		  )`, userID, status, now).Scan(&result.Total); err != nil {
+		return result, err
+	}
+
+	skip := (page - 1) * offset
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT id, user_id, amount, remaining, expires_at, created_at
+		FROM points_lots
+		WHERE user_id = $1
+		  AND (
+			$2 = ''
+			OR ($2 = 'active' AND expires_at > $3 AND remaining > 0)
+			OR ($2 = 'expired' AND expires_at <= $3)
+			OR ($2 = 'exhausted' AND expires_at > $3 AND remaining = 0)
+		  )
+		ORDER BY expires_at ASC, id ASC
+		LIMIT $4 OFFSET $5`, userID, status, now, offset, skip)
+	if err != nil {
+		return result, err
 	}
 	defer rows.Close()
 
-	lots := []LotInfo{}
 	for rows.Next() {
 		var l LotInfo
-		if err := rows.Scan(&l.LotID, &l.Amount, &l.Remaining, &l.ExpiresAt, &l.CreatedAt); err != nil {
-			return nil, err
+		if err := rows.Scan(&l.LotID, &l.UserID, &l.Amount, &l.Remaining, &l.ExpiresAt, &l.CreatedAt); err != nil {
+			return result, err
 		}
-		lots = append(lots, l)
+		l.Status = classifyLotStatus(l.ExpiresAt, l.Remaining, now)
+		result.Lots = append(result.Lots, l)
 	}
-	return lots, rows.Err()
+	return result, rows.Err()
 }
 
 // ListLedger returns a single page of ledger entries for a user, newest first.

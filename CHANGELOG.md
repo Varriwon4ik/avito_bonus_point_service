@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Paginated lots audit API (US-02).** `GET /v1/users/{id}/lots` now returns a
+  structured page envelope (`user_id`, `page`, `offset`, `total`, `lots`) and
+  supports `status=active|expired|exhausted`, so support tooling can explain a
+  user's balance lot-by-lot without relying on the web dashboard's old raw-list
+  response. Invalid pagination or status filters return `400 Bad Request`. (#2)
 ### Fixed
 
 - **Web autotester always reported "Autotester found issues" (US-17).** The

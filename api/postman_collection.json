@@ -2,7 +2,7 @@
   "info": {
     "name": "Bonus Points Ledger Service",
     "_postman_id": "9bc1c327-7b53-4e2a-a2c8-1ee5f4b5c110",
-    "description": "API collection for the Bonus Points Ledger Service. Includes the current accrual contract with optional transaction labels and the paginated transactions response.",
+    "description": "API collection for the Bonus Points Ledger Service. Includes the current accrual contract with optional transaction labels plus paginated lots and transaction-history responses.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -281,7 +281,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/v1/users/{{userId}}/lots",
+          "raw": "{{baseUrl}}/v1/users/{{userId}}/lots?page=1&offset=20&status=active",
           "host": [
             "{{baseUrl}}"
           ],
@@ -290,6 +290,20 @@
             "users",
             "{{userId}}",
             "lots"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "offset",
+              "value": "20"
+            },
+            {
+              "key": "status",
+              "value": "active"
+            }
           ]
         }
       },
@@ -298,7 +312,7 @@
           "name": "200 OK",
           "status": "OK",
           "code": 200,
-          "body": "[\n  {\n    \"lot_id\": 1,\n    \"amount\": 500,\n    \"remaining\": 300,\n    \"expires_at\": \"2026-12-11T10:00:00Z\",\n    \"created_at\": \"2026-06-14T10:00:00Z\"\n  }\n]"
+          "body": "{\n  \"user_id\": \"user_123\",\n  \"page\": 1,\n  \"offset\": 20,\n  \"total\": 1,\n  \"lots\": [\n    {\n      \"lot_id\": 1,\n      \"user_id\": \"user_123\",\n      \"amount\": 500,\n      \"remaining\": 300,\n      \"status\": \"active\",\n      \"expires_at\": \"2026-12-11T10:00:00Z\",\n      \"created_at\": \"2026-06-14T10:00:00Z\"\n    }\n  ]\n}"
         }
       ]
     },

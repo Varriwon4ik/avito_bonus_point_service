@@ -199,9 +199,27 @@ Content-Type: application/json
 -> 409 { "error": "conflict", "message": "insufficient available points" }
 ```
 
-### Lots and ledger (for the UI / debugging)
+### Lots and ledger (support tooling / UI)
 ```http
-GET /v1/users/{id}/lots
+GET /v1/users/{id}/lots?page=1&offset=20&status=active
+-> 200 {
+  "user_id": "user_123",
+  "page": 1,
+  "offset": 20,
+  "total": 3,
+  "lots": [
+    {
+      "lot_id": 1,
+      "user_id": "user_123",
+      "amount": 500,
+      "remaining": 300,
+      "status": "active",
+      "expires_at": "...",
+      "created_at": "..."
+    }
+  ]
+}
+
 GET /v1/users/{id}/transactions?page=1&offset=20
 -> 200 {
   "user_id": "user_123",
@@ -223,11 +241,13 @@ GET /v1/users/{id}/transactions?page=1&offset=20
 }
 ```
 
-Transaction history is paginated (US-09): `page` is the 1-based page number
-(default 1) and `offset` is the page size (1–500, default 20). Invalid values
-return `400 Bad Request`. Entries may also include a service-side `note`
-field when the platform records an internal annotation such as
-`auto-released: timeout`.
+Lots and transaction history are paginated with the same contract:
+`page` is the 1-based page number (default 1) and `offset` is the page size
+(`1`–`500`, default `20`). `GET /v1/users/{id}/lots` also accepts an optional
+`status` filter: `active`, `expired`, or `exhausted`. Invalid `page`,
+`offset`, or `status` values return `400 Bad Request`. Transaction entries may
+also include a service-side `note` field when the platform records an internal
+annotation such as `auto-released: timeout`.
 
 ### Autotester (US-15 / US-17)
 ```http

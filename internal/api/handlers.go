@@ -28,6 +28,30 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func parsePageAndOffset(w http.ResponseWriter, r *http.Request) (page, offset int, ok bool) {
+	page = 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			badRequest(w, "page must be a positive integer")
+			return 0, 0, false
+		}
+		page = n
+	}
+
+	offset = 20
+	if v := r.URL.Query().Get("offset"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 500 {
+			badRequest(w, "offset must be between 1 and 500")
+			return 0, 0, false
+		}
+		offset = n
+	}
+
+	return page, offset, true
+}
+
 type accrueRequest struct {
 	Amount         *int    `json:"amount"`
 	TTLDays        *int    `json:"ttl_days,omitempty"`
@@ -210,7 +234,21 @@ func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListLots(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("id")
-	lots, err := s.Store.ListLots(r.Context(), userID)
+
+	page, offset, ok := parsePageAndOffset(w, r)
+	if !ok {
+		return
+	}
+
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	switch status {
+	case "", data.LotStatusActive, data.LotStatusExpired, data.LotStatusExhausted:
+	default:
+		badRequest(w, "status must be one of: active, expired, exhausted")
+		return
+	}
+
+	lots, err := s.Store.ListLots(r.Context(), userID, page, offset, status)
 	if err != nil {
 		s.respond(w, 0, nil, err)
 		return
@@ -221,24 +259,9 @@ func (s *Server) handleListLots(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListLedger(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("id")
 
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 {
-			badRequest(w, "page must be a positive integer")
-			return
-		}
-		page = n
-	}
-
-	offset := 20
-	if v := r.URL.Query().Get("offset"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 || n > 500 {
-			badRequest(w, "offset must be between 1 and 500")
-			return
-		}
-		offset = n
+	page, offset, ok := parsePageAndOffset(w, r)
+	if !ok {
+		return
 	}
 
 	result, err := s.Store.ListLedger(r.Context(), userID, page, offset)
