@@ -25,6 +25,7 @@ with a built-in autotester, and Swagger/OpenAPI docs.
 | Automated tests verifying the QRs | [Quality requirement tests](quality-requirement-tests.md) |
 | Customer-executable acceptance scenarios | [User acceptance tests](user-acceptance-tests.md) |
 | Stable user-story registry | [User stories](user-stories.md) |
+| **Handover: access, transition state, self-hosting, limitations** | [Customer handover](customer-handover.md) |
 
 This site is built from the repository's `docs/` directory with MkDocs and
 republished automatically on every merge to `main`.

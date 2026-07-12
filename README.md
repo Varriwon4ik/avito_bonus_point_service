@@ -2,6 +2,14 @@
 
 [![CI](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml/badge.svg)](https://github.com/Varriwon4ik/avito_bonus_point_service/actions/workflows/ci.yml)
 
+> **Quick access** —
+> **Try it:** [deployed trial instance](#deployment) (university network) or
+> `docker compose up --build` locally ([Running](#running)) ·
+> **Docs:** [hosted documentation site](https://varriwon4ik.github.io/avito_bonus_point_service/) ·
+> **Handover:** [docs/customer-handover.md](./docs/customer-handover.md) ·
+> **Contributing:** [CONTRIBUTING.md](./CONTRIBUTING.md) ·
+> **AI agents:** [AGENTS.md](./AGENTS.md)
+
 A REST-like service for managing an online store's bonus-points program,
 addressing the problems of the original prototype:
 
@@ -20,6 +28,9 @@ addressing the problems of the original prototype:
   result instead of being applied twice.
 - Debits/holds always consume the **soonest-to-expire points first** (FIFO
   by `expires_at`), not in accrual order.
+- Points can be accrued **in bulk** for promotional campaigns:
+  `POST /v1/accruals/batch` processes each item independently and returns
+  per-item results (HTTP 207), so one bad row never fails the whole campaign.
 - Every request is **logged in structured form** (method, route, status,
   latency, and `user_id` where applicable) and a Prometheus `/metrics`
   endpoint exposes request counts/latencies plus ledger-level gauges.
@@ -68,11 +79,14 @@ Sanitized example environment values are available in [`.env.example`](./.env.ex
 
 ## Deployment
 
-The current Sprint increment is deployed on the University VM and is reachable at
+The current increment — the Week 6 trial / handover-candidate release
+[`v2.1.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.1.0)
+— is deployed on the University VM and is reachable at
 `http://10.93.26.175:8080/` — serving the web UI, Swagger UI at `/docs`, and the
 API. The address is on the university private network, so access requires the
 university network/VPN; exact private access details for graders are provided
-through Moodle.
+through Moodle. Self-hosting steps and the current handover state:
+[docs/customer-handover.md](./docs/customer-handover.md).
 
 ## Documentation
 
@@ -91,9 +105,19 @@ through Moodle.
   [docs/definition-of-done.md](./docs/definition-of-done.md).
 - Planning: [docs/roadmap.md](./docs/roadmap.md),
   [docs/user-stories.md](./docs/user-stories.md).
+- **Customer handover (access, transition state, self-hosting, limitations):**
+  [docs/customer-handover.md](./docs/customer-handover.md).
+- Contributing and agent guidance: [CONTRIBUTING.md](./CONTRIBUTING.md),
+  [AGENTS.md](./AGENTS.md).
 
 ## Submissions
 
+- **Week 6 (Assignment 6, Sprint 4 / trial release):** public report index at
+  [reports/week6/README.md](./reports/week6/README.md). Week 6 trial /
+  handover-candidate release:
+  [v2.1.0](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.1.0).
+  New maintained assets: [docs/customer-handover.md](./docs/customer-handover.md),
+  [CONTRIBUTING.md](./CONTRIBUTING.md), [AGENTS.md](./AGENTS.md).
 - **Week 5 (Assignment 5, Sprint 3 / MVP v2):** public report index at
   [reports/week5/README.md](./reports/week5/README.md). Release mapped to MVP v2:
   [v2.0.0](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.0.0).
@@ -154,6 +178,36 @@ Content-Type: application/json
 If `label` is provided, the backend trims it, accepts predefined values such
 as `test` and `real`, and rejects labels longer than 32 characters or labels
 containing control/unsafe characters.
+
+### Bulk accrual (US-01)
+```http
+POST /v1/accruals/batch
+Content-Type: application/json
+
+{
+  "items": [
+    { "user_id": "user_a", "amount": 100, "ttl_days": 30, "idempotency_key": "promo-1-a" },
+    { "user_id": "user_b", "amount": 200, "idempotency_key": "promo-1-b", "label": "promo-july" },
+    { "user_id": "",       "amount": 50,  "idempotency_key": "promo-1-c" }
+  ]
+}
+-> 207 {
+  "results": [
+    { "index": 0, "status": "created", "user_id": "user_a", "result": { "lot_id": 7, ... } },
+    { "index": 1, "status": "created", "user_id": "user_b", "result": { "lot_id": 8, ... } },
+    { "index": 2, "status": "error", "error": "bad_request", "message": "user_id is required" }
+  ]
+}
+```
+
+Accrues points to many users in one request — for promotional campaigns that
+would otherwise need thousands of individual calls. Each item carries its own
+`idempotency_key` (so partial retries never double-apply) and its own optional
+`ttl_days` and `label` with the same validation as single accruals. The
+response is always `207 Multi-Status` with per-item `created`/`error` results:
+one bad row does not fail the rest of the batch. The web UI's **Accrue Points**
+tab has a matching "Bulk accrual" row editor. An empty `items` array returns
+`400 Bad Request`.
 
 ### Get balance
 ```http
@@ -249,12 +303,12 @@ Lots and transaction history are paginated with the same contract:
 also include a service-side `note` field when the platform records an internal
 annotation such as `auto-released: timeout`.
 
-### Autotester (US-15 / US-17)
+### Autotester (US-15 / US-17 / US-19)
 ```http
 POST /v1/autotest/run
 Content-Type: application/json
 
-{ "label": "demo", "user_id": "demo-user", "amount": 100, "parallel_requests": 5 }
+{ "label": "demo", "user_id": "demo-user", "amount": 100, "parallel_requests": 5, "mode": "single" }
 -> 200 {
      "scenario": { "label": "demo", "user_id": "autotest-demo-user", "amount": 100,
                    "ttl_days": 365, "parallel_requests": 5, "ledger_label": "test" },
@@ -274,6 +328,13 @@ TTL and `parallel_requests` defaults to 5. The `user_id` is always forced under 
 `autotest-` prefix so real accounts are never touched. This backs the **Autotester**
 tab in the web UI and shares the `internal/autotest` engine with the `cmd/autotest`
 console tool.
+
+The optional `mode` field selects the test set (US-19): the default `single`
+runs the original correctness and parallel-burst checks with one shared
+idempotency key, while `multi_key` fires N parallel accruals with N **distinct**
+idempotency keys and verifies each key applies exactly once with a consistent
+balance and ledger. In the web UI this is the **Test mode** selector on the
+Autotester tab.
 
 ## Observability
 

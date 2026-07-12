@@ -19,6 +19,9 @@ increment (web UI at `/`, Swagger UI at `/docs`) or via the HTTP API.
 | UAT-004 | See exact HTTP response codes in the web UI | Active | US-16 (Sprint 3) |
 | UAT-005 | Run the autotester from the web UI | Active | US-17 (Sprint 3) |
 | UAT-006 | Label a transaction and find it in the history | Active | US-18, US-08 (Sprint 3) |
+| UAT-007 | Run a bulk accrual campaign with per-item results | Active | US-01 (Sprint 4) |
+| UAT-008 | Audit a user's points lots with status filtering | Active | US-02 (Sprint 4) |
+| UAT-009 | Run the multi-key parallel autotester scenario | Active | US-19 (Sprint 4) |
 
 ---
 
@@ -213,6 +216,111 @@ customer specifically praised custom labels ("you can assign a certain product
 with a label to its transaction and have a convenient tool to confirm debits").
 The TTL-validation behaviour (US-08) was demonstrated in the same session and
 accepted. No defect PBI opened.
+
+---
+
+## UAT-007: Run a bulk accrual campaign with per-item results
+
+- **Status:** Active
+- **User goal:** A marketing operator grants points to many users in one
+  request — a promotional campaign — and can see per-user success/failure
+  without one bad row failing the whole batch.
+- **Verifies:** [US-01 / #1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1)
+  and its acceptance criteria (per-item idempotency keys, per-item results).
+- **Preconditions:** The service is deployed and reachable; the web UI opens
+  at `/`.
+
+**Steps:**
+
+1. In the **Accrue Points** tab, open the **Bulk accrual** card.
+2. Add three rows: two valid users (different amounts, one with a custom
+   label) and one row with an empty user id.
+3. Submit the batch and read the per-item results table.
+4. Submit the same batch again (same idempotency keys).
+5. Check the balance of one of the valid users.
+
+**Expected outcome:** Step 3 shows `created` for the two valid rows and an
+`error` (`bad_request`, "user_id is required") for the invalid row — the valid
+rows are applied despite the failing one. Step 4 returns the same results
+without accruing points twice (per-item idempotency). Step 5 shows the balance
+increased exactly once per valid row. Equivalent behaviour is available via
+`POST /v1/accruals/batch` (always `207 Multi-Status`).
+
+### Execution history
+
+**Planned: Week 6 trial / transition-readiness session (Assignment 6).**
+<!-- TODO(team): append the execution result (date, Passed/Failed, customer
+     comments, resulting PBIs) after the Week 6 customer trial. -->
+
+---
+
+## UAT-008: Audit a user's points lots with status filtering
+
+- **Status:** Active
+- **User goal:** A support engineer investigating a balance discrepancy sees
+  every individual points lot of a user — amount, remaining, status, expiry —
+  and can filter by lot status to explain exactly why the balance is what it
+  is and which points expire soon.
+- **Verifies:** [US-02 / #2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2)
+  and its acceptance criteria (paginated envelope, status filter).
+- **Preconditions:** A test user with several lots in different states (e.g.
+  one active, one exhausted by debits; an expired one if a short-TTL lot was
+  prepared).
+
+**Steps:**
+
+1. Request the first page: `GET /v1/users/{id}/lots?page=1&offset=20` (or open
+   the lots view in the web UI).
+2. Filter by status: `GET /v1/users/{id}/lots?status=active`.
+3. Try an invalid filter: `GET /v1/users/{id}/lots?status=banana`.
+
+**Expected outcome:** Step 1 returns `200` with the envelope
+`{ user_id, page, offset, total, lots }`, each lot showing `amount`,
+`remaining`, `status`, `expires_at`, `created_at`. Step 2 returns only lots
+whose status is `active`, with `total` reflecting the filtered count. Step 3
+returns `400 Bad Request` with the standard error envelope.
+
+### Execution history
+
+**Planned: Week 6 trial / transition-readiness session (Assignment 6).**
+<!-- TODO(team): append the execution result after the Week 6 customer trial. -->
+
+---
+
+## UAT-009: Run the multi-key parallel autotester scenario
+
+- **Status:** Active
+- **User goal:** A system administrator verifies from the browser that
+  concurrent operations with **multiple distinct idempotency keys** each apply
+  exactly once — the concurrency property the customer asked to see tested at
+  the Sprint 3 review.
+- **Verifies:** [US-19 / #50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50)
+  and its acceptance criteria (N keys → N applied operations; cached re-runs;
+  selectable from the web UI).
+- **Preconditions:** The service is deployed and reachable; the web UI opens
+  at `/`.
+
+**Steps:**
+
+1. Open the **Autotester** tab.
+2. Set **Test mode** to "Multiple keys — N distinct idempotency keys (US-19)"
+   and configure a scenario (amount, parallel requests).
+3. Run the scenario and read the per-check report.
+4. Switch Test mode back to "single" and run again.
+
+**Expected outcome:** Step 3 shows the multi-key parallel accrual check with a
+pass verdict: each of the N keys produced exactly one applied accrual (no
+duplicates, no losses) and the final balance and ledger are consistent with N
+operations; re-fired requests with the same keys are served from the
+idempotency cache. Step 4 runs only the original single-key correctness and
+parallel-burst checks (the multi-key check runs **only** when selected — the
+fix for issue #60). All runs target an `autotest-`-prefixed user, never a
+real account.
+
+### Execution history
+
+**Planned: Week 6 trial / transition-readiness session (Assignment 6).**
+<!-- TODO(team): append the execution result after the Week 6 customer trial. -->
 
 ---
 

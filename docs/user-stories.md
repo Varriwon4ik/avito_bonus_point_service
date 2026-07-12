@@ -11,6 +11,8 @@ linked issue for the live statement, acceptance criteria, and discussion.
 - Sprint 1 milestone: [Sprint 1](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/1)
 - Sprint 2 milestone (Assignment 4): [Sprint 2](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/2)
 - Sprint 3 milestone (Assignment 5): [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3)
+- Sprint 4 milestone (Assignment 6, Week 6): [Sprint 4](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/4)
+- Sprint 5 milestone (Assignment 6, Week 7): [Sprint 5](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/5)
 
 Active stories are ordered by MoSCoW priority, then Sprint, then stable ID.
 Removed stories are listed after all active stories.
@@ -29,9 +31,9 @@ Removed stories are listed after all active stories.
 | US-16 | Frontend HTTP responses implementation | Should Have | [#39](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/39) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
 | US-17 | Frontend autotester implementation | Should Have | [#40](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/40) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
 | US-18 | An option to put labels on transactions | Could Have | [#41](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/41) | Active | Done | [Sprint 3](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/3) |
-| US-01 | Bulk points accrual for promotional campaigns | Should Have | [#1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1) | Active | To Do | — |
-| US-02 | List and audit a user's points lots | Should Have | [#2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2) | Active | To Do | — |
-| US-19 | Autotester scenarios with multiple idempotency keys in parallel | Could Have | [#50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50) | Active | To Do | — |
+| US-01 | Bulk points accrual for promotional campaigns | Should Have | [#1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1) | Active | Done | [Sprint 4](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/4) |
+| US-02 | List and audit a user's points lots | Should Have | [#2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2) | Active | Done | [Sprint 4](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/4) |
+| US-19 | Autotester scenarios with multiple idempotency keys in parallel | Could Have | [#50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50) | Active | Done | [Sprint 4](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/4) |
 | US-07 | Manual bonus point accrual | — | [#4](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/4) | Removed | — | — |
 | US-03 | Earn bonus points after purchase | — | — | Removed | — | — |
 | US-04 | Maintain automated regression coverage | — | — | Removed | — | — |
@@ -64,8 +66,13 @@ Removed stories are listed after all active stories.
   `Active`/`Done`; the revert history is preserved in the linked PRs.
 - **US-19** was raised by the customer during the Sprint 3 Review / UAT session
   (3 Jul 2026): extend the autotester to run parallel scenarios with multiple
-  distinct idempotency keys. It is refined but not yet estimated or
-  Sprint-committed.
+  distinct idempotency keys. It was estimated (3 SP), selected into Sprint 4,
+  and **delivered** in the Week 6 trial release
+  ([PR #55](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/55);
+  its first landing ran the multi-key check on every autotester run — the
+  intended opt-in mode switch was added with the
+  [#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60)
+  fix in [PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61)).
 
 ## Stable ID allocation
 

@@ -9,6 +9,9 @@ same PR.
 Shared semantics (Work Status values, Definition of Done, PBI rules,
 estimation) follow the course process requirements; the team-specific
 completion standard is [docs/definition-of-done.md](definition-of-done.md).
+The condensed contributor entry point is
+[CONTRIBUTING.md](../CONTRIBUTING.md); AI coding agents additionally follow
+[AGENTS.md](../AGENTS.md).
 
 ## Contents
 
