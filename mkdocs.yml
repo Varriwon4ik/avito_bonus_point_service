@@ -53,6 +53,8 @@ nav:
       - Definition of Done: definition-of-done.md
       - Roadmap: roadmap.md
       - User stories: user-stories.md
+  - Handover:
+      - Customer handover: customer-handover.md
   - Quality and testing:
       - Testing status: testing.md
       - Quality requirements: quality-requirements.md

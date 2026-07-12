@@ -7,19 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-12
+
+Week 6 trial / handover-candidate release — the Sprint 4 increment
+(Assignment 6, 6–12 Jul 2026). Maps to the
+[Sprint 4 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/4):
+US-01, US-02, US-19, plus the fixes for #54 and #60. This is the release the
+customer trials before the final Week 7 transition; the final course version
+`MVP v3` follows with higher SemVer precedence.
+
 ### Added
 
+- **Bulk points accrual for promotional campaigns (US-01).** New
+  `POST /v1/accruals/batch` endpoint: each item carries its own `user_id`,
+  `amount`, optional `ttl_days`/`label`, and per-item `idempotency_key`, and the
+  response is always `207 Multi-Status` with per-item `created`/`error` results,
+  so one bad row never fails the whole campaign and partial retries never
+  double-apply. (#1, PR #57)
 - **Paginated lots audit API (US-02).** `GET /v1/users/{id}/lots` now returns a
   structured page envelope (`user_id`, `page`, `offset`, `total`, `lots`) and
   supports `status=active|expired|exhausted`, so support tooling can explain a
   user's balance lot-by-lot without relying on the web dashboard's old raw-list
-  response. Invalid pagination or status filters return `400 Bad Request`. (#2)
+  response. Invalid pagination or status filters return `400 Bad Request`.
+  (#2, PR #59)
+- **Multi-key parallel autotester scenarios (US-19).** The shared
+  `internal/autotest` engine gained a check that fires N parallel accruals with
+  N distinct idempotency keys and verifies each key applies exactly once — no
+  duplicates, no losses — with a consistent balance and ledger; re-runs with the
+  same keys are served from the idempotency cache. Requested by the customer at
+  the Sprint 3 review. (#50, PR #55)
 - **Bulk accrual in the web UI.** The Accrue Points tab now has a "Bulk accrual"
   card — a row editor (user, amount, optional TTL, idempotency key, optional
-  label) that submits all rows to the existing `POST /v1/accruals/batch`
-  endpoint and renders the per-item multi-status results, so points can be
-  granted to several users at once from the browser. The endpoint itself shipped
-  in PR #57 without a front end. (#1)
+  label) that submits all rows to the `POST /v1/accruals/batch` endpoint and
+  renders the per-item multi-status results, so points can be granted to several
+  users at once from the browser. The endpoint itself shipped in PR #57 without
+  a front end. (#1, #60, PR #61)
 
 ### Fixed
 
@@ -30,14 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backed by a new optional `mode` field on `POST /v1/autotest/run`: the default
   `single` mode runs the original correctness and parallel-burst checks, and the
   US-19 multi-key check runs only when `multi_key` is selected explicitly. The
-  `cmd/autotest` console tool is unchanged. (#50)
+  `cmd/autotest` console tool is unchanged. (#50, #60, PR #61)
 - **Web autotester always reported "Autotester found issues" (US-17).** The
   Autotester tab read the pass/fail verdict from the HTTP wrapper object instead
   of the response body, so `passed` was always `undefined` and every run — even
   a fully successful one with code 200 — showed "✗ Some checks failed" with an
   empty per-check table. The tab now unwraps the response body before rendering
   the verdict and surfaces API validation errors (HTTP 4xx) as their own toast
-  message. (#54)
+  message. (#54, PR #58)
 
 ## [2.0.0] - 2026-07-05
 
@@ -151,7 +173,8 @@ MVP v1 — the first delivered increment (Sprint 1, 15–21 Jun 2026). Maps to t
   status codes (200/201/400/404/409/500) with a consistent JSON error envelope,
   and the OpenAPI specification was updated to match. (#12, PR #15)
 
-[Unreleased]: https://github.com/Varriwon4ik/avito_bonus_point_service/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Varriwon4ik/avito_bonus_point_service/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.0.0
 [1.1.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.0.0
