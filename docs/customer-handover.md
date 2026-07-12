@@ -123,11 +123,19 @@ Steps the customer must be able to follow on their own machine or server
 - **The trial VM is university-network-only** and is kept only until grading
   is complete — it is not a long-term hosting commitment; long-term operation
   means self-hosting from the repository.
-- **Horizontal-scaling suitability is not yet explicitly documented.**
-  Requested by the customer at the Week 6 documentation review; the
-  assessment and an explicit statement in the architecture documentation are
-  scheduled as `Must Have` for Sprint 5
-  ([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)).
+- **Horizontal scaling: the API tier scales out, the database does not.**
+  Multiple API replicas can run against one PostgreSQL — all correctness
+  (row locking, idempotency, hold auto-release) is enforced in the database,
+  so this needs only a load balancer, one shared Postgres primary, and
+  per-replica Prometheus scraping (`/metrics` is per-process). PostgreSQL
+  itself remains a single instance: it is the write bottleneck and single
+  point of failure, and a single user's mutations always serialize on row
+  locks regardless of replica count. The shipped docker compose describes the
+  single-replica trial topology only. Full statement and analysis:
+  [Architecture → Horizontal scaling](architecture/README.md#horizontal-scaling)
+  and [ADR-006](architecture/adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md)
+  ([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64),
+  requested by the customer at the Week 6 review).
 
 ## Handover status
 
@@ -158,7 +166,8 @@ Steps the customer must be able to follow on their own machine or server
   and reflected in the known-limitations list above until resolved.
 - **Support that remains necessary from the team (current stage):** operating
   the university trial VM until grading, deploying releases to it, and
-  completing the remaining Week 7 actions (the #64 scaling write-up, final
-  release `MVP v3`, and the acceptance confirmation of this document). After
+  completing the remaining Week 7 actions (final release `MVP v3` and the
+  acceptance confirmation of this document; the #64 scaling assessment is
+  done — see the known-limitations entry above). After
   final delivery the customer takes care of the project on their own — no
   ongoing team support was requested.

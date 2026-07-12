@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Explicit horizontal-scaling statement in the architecture docs
+  ([ADR-006](docs/architecture/adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md)).**
+  Requested by the customer at the Week 6 review: the API tier is stateless
+  and scales out over one PostgreSQL (row locking, idempotency, and hold
+  auto-release are all database-enforced and replica-safe); conditions and
+  caveats (load balancer, per-replica `/metrics` scraping, Postgres as the
+  single write bottleneck) are documented in the architecture README and the
+  customer handover's known limitations. (#64)
+
+### Fixed
+
+- **Startup migrations no longer race under concurrent replica boots.**
+  `data.Migrate` now serializes on a Postgres advisory lock, so several API
+  instances starting simultaneously against a fresh database cannot fail on
+  concurrent `CREATE TABLE IF NOT EXISTS`. (#64)
+
 ## [2.1.0] - 2026-07-12
 
 Week 6 trial / handover-candidate release — the Sprint 4 increment
