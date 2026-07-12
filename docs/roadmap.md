@@ -132,12 +132,21 @@ deliver the final course version **MVP v3** as a release with higher SemVer
 precedence than the Week 6 trial release, leaving the customer able to use,
 verify, and operate the ledger with the maintained documentation set.
 
-**Expected follow-up scope** — most Sprint 5 PBIs depend on the Week 6 customer
-trial and documentation review and are added to the milestone right after that
-meeting. Currently planned candidates:
+**Committed from the Week 6 customer trial and documentation review
+(10 Jul 2026):**
 
-- Fixes, usability improvements, and documentation updates resulting from the
-  Week 6 customer trial and customer-facing documentation review.
+- **[#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)**
+  (`Must Have`) — assess horizontal-scaling suitability and state it
+  explicitly in the architecture documentation. One of the customer's two
+  conditions for considering the delivery complete; the other — the UI
+  display fix ([#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60))
+  — was resolved on the day of the review.
+- Re-execute UAT-007 and UAT-009 with the customer at the Week 7 transition
+  confirmation (they failed at the Week 6 session on the stale-UI defect
+  fixed the same day).
+
+**Remaining planned candidates:**
+
 - Run the autotester/regression checks against a demo (earlier) version of the
   product to prove changes are valid (customer request carried from
   Sprint 2/3).

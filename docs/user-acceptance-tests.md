@@ -248,9 +248,16 @@ increased exactly once per valid row. Equivalent behaviour is available via
 
 ### Execution history
 
-**Planned: Week 6 trial / transition-readiness session (Assignment 6).**
-<!-- TODO(team): append the execution result (date, Passed/Failed, customer
-     comments, resulting PBIs) after the Week 6 customer trial. -->
+**2026-07-10 (Week 6 trial / Sprint 4 review session)** — **Failed.** Driven
+by Sanzhar with the Customer. The "Bulk accrual" card was missing from the
+deployed web UI — the deployment served a stale embedded interface
+([#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60)) —
+so the browser scenario could not be executed. The endpoint's per-item
+behaviour was demonstrated via Swagger and accepted by the Customer. The fix
+merged the same day
+([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61))
+and the VM was redeployed on 10 Jul; **re-execution scheduled for the Week 7
+transition confirmation.**
 
 ---
 
@@ -282,8 +289,10 @@ returns `400 Bad Request` with the standard error envelope.
 
 ### Execution history
 
-**Planned: Week 6 trial / transition-readiness session (Assignment 6).**
-<!-- TODO(team): append the execution result after the Week 6 customer trial. -->
+**2026-07-10 (Week 6 trial / Sprint 4 review session)** — **Passed.** Driven
+by Mikhail with the Customer (covering for the absent implementer's slot).
+The paginated envelope and the `status` filter behaved as specified; the
+Customer's verdict: "this part works as I would expect."
 
 ---
 
@@ -319,10 +328,45 @@ real account.
 
 ### Execution history
 
-**Planned: Week 6 trial / transition-readiness session (Assignment 6).**
-<!-- TODO(team): append the execution result after the Week 6 customer trial. -->
+**2026-07-10 (Week 6 trial / Sprint 4 review session)** — **Failed.** Driven
+by Nurislam with the Customer. The "Test mode" selector was missing from the
+deployed web UI (same stale-interface root cause,
+[#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60)),
+so the browser scenario could not be executed; the multi-key check itself was
+shown passing from the `cmd/autotest` console tool. Fixed and redeployed the
+same day ([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61));
+**re-execution scheduled for the Week 7 transition confirmation.**
 
 ---
+
+## Customer feedback and resulting backlog decisions (2026-07-10)
+
+The Week 6 session combined the Sprint 4 review, the customer trial (each
+present team member drove one scenario: Sanzhar — UAT-007, Mikhail —
+UAT-008, Nurislam — UAT-009), the customer-facing documentation review, and
+the transition-readiness discussion. UAT-008 passed; UAT-007 and UAT-009
+failed on one shared root cause — the deployed build served a stale embedded
+UI. Feedback converted into backlog decisions:
+
+- **"Fix everything by next week" (stale UI controls)** →
+  [#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60),
+  fixed and merged the same day
+  ([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61));
+  VM redeployed 10 Jul; UAT-007/009 re-execution at the Week 7 confirmation.
+- **State explicitly whether the service scales horizontally** (from the
+  documentation review — the set was otherwise judged complete) → new PBI
+  [#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)
+  (`Must Have`, Sprint 5); a customer condition for considering the delivery
+  complete.
+- **Transition expectations recorded:** the Customer will not run the
+  university-VM instance (large-company security/deployment bar; internal
+  structure confidential); after final delivery their interns evaluate and
+  deploy the project on their side. Reflected in
+  [docs/customer-handover.md](customer-handover.md).
+
+Summarised public results for the assignment are in
+[reports/week6/README.md](../reports/week6/README.md) and
+[reports/week6/sprint-review-summary.md](../reports/week6/sprint-review-summary.md).
 
 ## Customer feedback and resulting backlog decisions (2026-07-03)
 

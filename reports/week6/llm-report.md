@@ -37,11 +37,13 @@ The team used AI/LLM tools during Week 6 (Sprint 4) as follows.
 
 ## Transcription and translation
 
-- If the customer permits publication, the Week 6 session transcript is
-  transcribed/condensed by the team and translated into English with LLM
-  assistance, then reviewed by the meeting participants before publication —
-  the same process as Weeks 3–5.
-  <!-- TODO(team): confirm or update this section after the session. -->
+- The Customer permitted public transcript publication for the 10 July
+  session. The published
+  [sprint-review-transcript.md](sprint-review-transcript.md) was produced
+  with LLM assistance (Claude Code) from the team's own condensed meeting
+  draft — translated into English, structured, and sanitized (customer name
+  replaced with "Customer", timestamps approximate) — and is reviewed by the
+  meeting participants before submission, the same process as Weeks 3–5.
 
 ## Research and ideas
 
