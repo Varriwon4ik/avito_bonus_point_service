@@ -75,9 +75,8 @@ trial release, and this report set.
   Hosted on the University VM — a private (RFC 1918) address reachable only on
   the university network/VPN. Private access details for graders are submitted
   through Moodle. The artifact stays accessible until grading is complete.
-  <!-- TODO(team): confirm the VM is redeployed to v2.1.0 (docker compose up
-       --build -d at the release commit) — the Sprint 3 retrospective
-       action point is deploy-on-merge-day. -->
+  The VM was redeployed on **10 July 2026** — the same day the last Sprint 4
+  PRs merged — to the commit later tagged `v2.1.0`.
 - **Access/run instructions:** [root README → Running](../../README.md#running)
   and [→ Deployment](../../README.md#deployment); self-hosting steps in
   [docs/customer-handover.md](../../docs/customer-handover.md).
@@ -116,11 +115,19 @@ week:
 
 ### Customer review of the documentation set
 
-> **To be completed after the Week 6 customer session.**
-<!-- TODO(team): summarize what the customer found clear, unclear, or missing
-     in README.md, docs/customer-handover.md, access/deployment instructions,
-     troubleshooting notes, and known limitations; link the issues opened for
-     each gap. -->
+Reviewed with the Customer at the 10 July session:
+
+- **Clear / complete:** the Customer assessed the documentation set as
+  complete overall — the READMEs cover what he needs for understanding,
+  setup, and deployment; nothing was flagged as unclear or missing for
+  normal use.
+- **Missing (one item):** the architecture documentation must state
+  **explicitly whether the service can be scaled horizontally or not**, with
+  the reasoning. Converted into
+  [#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)
+  (`Must Have`, [Sprint 5 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/5))
+  — one of the Customer's two conditions for considering the delivery
+  complete.
 
 ## 6. Transition-readiness summary
 
@@ -140,16 +147,32 @@ week:
   SemVer precedence, record the public sanitized demo video, confirm customer
   acceptance of the handover document, and prepare Demo Day.
 
-**Meeting outcomes** (readiness for transition, parts still needing changes,
-whether the customer already uses/deploys the product and if not why, what
-must happen in Week 7, how to keep the product useful after final delivery):
+**Meeting outcomes (10 July session):**
 
-> **To be completed after the Week 6 customer session.**
-<!-- TODO(team): record the answers to each Part 5.2 discussion point and
-     whether the customer (a) confirmed readiness for independent use after
-     Week 7 work, (b) independently used the trial release, (c) deployed or
-     operated it on their side. Convert identified problems into PBIs/issues
-     and link them here. -->
+- **Complete enough for transition:** yes — the Customer is satisfied with
+  the current version; no parts are missing and the main features are
+  implemented. Two conditions remain for the delivery to be considered
+  complete: the UI display fix
+  ([#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60)
+  — resolved the same day) and the horizontal-scaling assessment
+  ([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)).
+- **Customer use today:** the Customer is not using the product yet — it was
+  designed for a large-company context, and a simple deployment with the
+  university VM's weak security posture does not meet their operational bar,
+  so they will not adopt the trial instance directly.
+- **Customer-side deployment:** not deployed on the customer side; their
+  internal deployment structure is confidential. After the final delivery, a
+  group of the customer's interns will evaluate the project and perform the
+  customer-side deployment on their infrastructure.
+- **What must happen in Week 7:** fix the UI bug (done), assess and
+  explicitly document horizontal scaling (#64), polish, and complete the
+  final delivery (`MVP v3`).
+- **Usefulness after delivery:** the Customer will take care of the project
+  on his own after the handover; no ongoing team support was requested.
+- **Part 5.5 record** — the Customer: confirmed readiness for independent
+  use after Week 7 work — **yes**; independently used the trial release
+  during the session — **yes**; deployed or operated it on their side —
+  **no**.
 
 ## 7. Customer feedback response
 
@@ -164,12 +187,12 @@ responded:
 | Model point expiry as an explicit auditable ledger transaction (Sprint 1 follow-up). | Tracked in [docs/roadmap.md](../../docs/roadmap.md); analysed in [ADR-002](../../docs/architecture/adr/ADR-002-lazy-expiry-and-fifo-by-expiry-consumption.md) | Deferred | Unchanged tradeoff, documented in ADR-002 and listed as a known limitation in [docs/customer-handover.md](../../docs/customer-handover.md); Sprint 5 candidate. |
 | "Work as a team, as a whole" (process feedback, repeated). | [Week 5 retrospective action point 1](../week5/retrospective.md#action-points) | Addressed in process | Sprint 4 work was spread across all four members with cross-review pairs (see §14); results assessed in this week's [retrospective](retrospective.md). |
 
-**New feedback from the Week 6 trial / documentation review:**
+**New feedback from the Week 6 trial / documentation review (10 July):**
 
-> **To be completed after the Week 6 customer session** — each new feedback
-> point gets a row: feedback → resulting PBI/issue → status
-> (addressed / partially / backlog / rejected with rationale).
-<!-- TODO(team): add the Week 6 meeting feedback rows. -->
+| Feedback point | Resulting PBI or issue | Status | Response |
+|---|---|---|---|
+| The deployed UI did not show the new controls (bulk card, Test-mode selector) — "fix everything by next week"; UAT-007/009 failed on this. | [#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60) → [PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61) | **Addressed same day** | The stale embedded UI was fixed and merged on 10 Jul; the VM was redeployed the same day to the commit later tagged `v2.1.0`. UAT-007/009 are re-executed at the Week 7 confirmation. |
+| State explicitly in the architecture documentation whether the service can be scaled horizontally, with reasoning; assess the project's horizontal-scaling potential. | [#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64) | Added to backlog (Sprint 5, `Must Have`) | A customer condition for final delivery: the analysis and the explicit statement land in `docs/architecture/README.md` (plus handover limitations) during Sprint 5. |
 
 **Feedback not addressed this Sprint:** the demo-version regression run and
 the expiry-as-explicit-transaction model — both deferred with the rationale
@@ -234,27 +257,40 @@ Sprint 5 planning candidates.
 
 ## 11. UAT and customer-trial results (public, sanitized)
 
-The relevant maintained scenarios for the changed behaviour are
-**UAT-007** (bulk accrual, US-01), **UAT-008** (lots audit, US-02), and
-**UAT-009** (multi-key autotester, US-19) —
-[docs/user-acceptance-tests.md](../../docs/user-acceptance-tests.md).
+Executed with the Customer on **10 July 2026** — each present team member
+drove one scenario against the deployed trial instance (Sanzhar — UAT-007;
+Mikhail — UAT-008, covering for the absent Sergey; Nurislam — UAT-009):
 
-> **To be completed after the Week 6 customer session:** which scenarios
-> passed, which failed or still need changes, the most important feedback
-> points, and the resulting PBIs or issues.
-<!-- TODO(team): fill from the trial session; append the execution history in
-     docs/user-acceptance-tests.md at the same time. -->
+- **UAT-007** Run a bulk accrual campaign with per-item results (US-01) —
+  **Failed** at the session: the bulk card was missing from the deployed UI
+  ([#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60));
+  the endpoint's per-item behaviour was accepted via Swagger.
+- **UAT-008** Audit a user's points lots with status filtering (US-02) —
+  **Passed** ("works as I would expect").
+- **UAT-009** Run the multi-key parallel autotester scenario (US-19) —
+  **Failed** at the session: the Test-mode selector was missing from the
+  deployed UI (#60); the engine check was shown passing from the console.
+
+Both failures share one root cause — the deployed build served a stale
+embedded UI. The fix merged the same day
+([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61))
+and the VM was redeployed on 10 Jul; UAT-007/009 are re-executed with the
+customer at the Week 7 transition confirmation. **Most important feedback:**
+fix the UI before next week (done), and assess + explicitly document
+horizontal-scaling suitability
+([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)).
+Full scenarios and execution history:
+[docs/user-acceptance-tests.md](../../docs/user-acceptance-tests.md).
 
 ## 12. Sprint Review artifacts
 
 - **Summary:** [sprint-review-summary.md](sprint-review-summary.md)
-- **Transcript:** [sprint-review-transcript.md](sprint-review-transcript.md)
-  <!-- TODO(team): after the session, either (a) publish the sanitized
-       English transcript there if the customer permits public publication —
-       recording permission, publication permission, and private-sharing
-       permission must each be asked separately — or (b) replace this line
-       with the refusal statement and share the transcript/notes only through
-       Moodle, per the assignment's fallback rules. -->
+- **Transcript (public publication permitted by the Customer):**
+  [sprint-review-transcript.md](sprint-review-transcript.md) — one recorded
+  session (10 July 2026) covers the Sprint Review, the customer trial / UAT,
+  the documentation review, and the transition-readiness discussion.
+  Recording permission was asked and granted before recording started, and
+  the Customer permitted public transcript publication.
 - The private recording link and the exact private timecodes (customer trial,
   transition-readiness discussion, Sprint Review, and UAT segments of the
   session) are submitted only through Moodle.
@@ -269,10 +305,10 @@ The relevant maintained scenarios for the changed behaviour are
 
 | Member | GitHub | Roles | Issues / PRs (implementer) | Review activity | Testing / docs / transition / deployment |
 |---|---|---|---|---|---|
-| Mikhail Ilin | [@Varriwon4ik](https://github.com/Varriwon4ik) | PM; QA; Backend | Bug #54 ([PR #58](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/58)); bug #60 ([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61)) | Reviewed US-02 ([PR #59](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/59)) | Sprint 4/5 milestones, `v2.1.0` trial release, [docs/customer-handover.md](../../docs/customer-handover.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [AGENTS.md](../../AGENTS.md), README polish, Week 6 report set (Course Task [#62](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/62)), VM deployment |
-| Nurislam Denisov | [@NurikDen](https://github.com/NurikDen) | QA; Backend | US-19 ([#50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50), [PR #55](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/55)) | Reviewed US-01 ([PR #57](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/57)) and the #54 fix ([PR #58](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/58)) | Multi-key check in the shared autotest engine + engine tests |
-| Sanzhar Kadambaev | [@kadambaevsanzhar](https://github.com/kadambaevsanzhar) | Scrum Master; QA | US-02 ([#2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2), [PR #59](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/59)) | Reviewed US-19 ([PR #55](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/55)) and the #60 fix ([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61)) | Lots audit tests ([lots_test.go](../../internal/api/lots_test.go)), autotester legacy-response compatibility, coverage-gate dedupe fix |
-| Sergey Chuenko | [@SergeiCh07](https://github.com/SergeiCh07) | Scrum Master; QA | US-01 ([#1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1), [PR #57](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/57)) | — (no recorded PR review this Sprint; see [retrospective](retrospective.md)) | Batch accrual TTL-bounds and invalid-label error mapping + integration tests |
+| Mikhail Ilin | [@Varriwon4ik](https://github.com/Varriwon4ik) | PM; QA; Backend | Bug #54 ([PR #58](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/58)); bug #60 ([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61)) | Reviewed US-02 ([PR #59](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/59)) | Sprint 4/5 milestones, `v2.1.0` trial release, [docs/customer-handover.md](../../docs/customer-handover.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [AGENTS.md](../../AGENTS.md), README polish, Week 6 report set (Course Task [#62](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/62)), VM deployment (redeployed 10 Jul), drove UAT-008 at the review |
+| Nurislam Denisov | [@NurikDen](https://github.com/NurikDen) | QA; Backend | US-19 ([#50](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/50), [PR #55](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/55)) | Reviewed US-01 ([PR #57](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/57)) and the #54 fix ([PR #58](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/58)) | Multi-key check in the shared autotest engine + engine tests, drove UAT-009 at the review |
+| Sanzhar Kadambaev | [@kadambaevsanzhar](https://github.com/kadambaevsanzhar) | Scrum Master; QA | US-02 ([#2](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/2), [PR #59](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/59)) | Reviewed US-19 ([PR #55](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/55)) and the #60 fix ([PR #61](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/61)) | Lots audit tests ([lots_test.go](../../internal/api/lots_test.go)), autotester legacy-response compatibility, coverage-gate dedupe fix, drove UAT-007 at the review |
+| Sergey Chuenko | [@SergeiCh07](https://github.com/SergeiCh07) | Scrum Master; QA | US-01 ([#1](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/1), [PR #57](https://github.com/Varriwon4ik/avito_bonus_point_service/pull/57)) | — (no recorded PR review this Sprint; see [retrospective](retrospective.md)) | Batch accrual TTL-bounds and invalid-label error mapping + integration tests; could not attend the 10 Jul review session (US-01 demo covered by teammates) |
 
 ## 15. Current product status and expected Week 7 follow-up
 
@@ -314,10 +350,12 @@ customer-identifying information and are submitted only through Moodle.
 
 ## 18. Deviations from expected defaults
 
-- **Sprint Review evidence form:** finalized after the Week 6 session —
-  transcript if the customer permits publication (as in Weeks 3–5), otherwise
-  the documented fallback (§12).
 - **Screenshots:** pending at first publication — see §17.
-- No other artifact-form deviations this week: boards, milestones, release
-  mapping, changelog, CI gates, and report structure follow the shared
-  requirements.
+- **One team member absent from the Week 6 session:** Sergey Chuenko could
+  not attend on 10 July; his feature slot (US-01) and UAT-007 were covered by
+  the teammates present. His Sprint 4 implementation work is in §3/§14; the
+  private participation details go into the Moodle PDF.
+- No other artifact-form deviations this week: the Sprint Review evidence
+  form is a published transcript as in Weeks 3–5 (§12); boards, milestones,
+  release mapping, changelog, CI gates, and report structure follow the
+  shared requirements.

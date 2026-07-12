@@ -22,7 +22,7 @@ deployment steps, limitations, or transition status change.
 | Source code and history | **Transferred (public).** The full monorepo — product code, migrations, documentation, CI configuration, reports — is public at <https://github.com/Varriwon4ik/avito_bonus_point_service> under the [MIT License](../LICENSE). The customer (and anyone) can clone, fork, build, and redistribute team-created content without asking the team. |
 | Repository ownership / administration | **Retained by the team** until the course is graded: the repository, branch-protection rules, milestones, releases, and CI configuration stay under the team's GitHub account so grading evidence is preserved. Nothing blocks the customer from forking today; ownership transfer of the original repository can be arranged after grading if the customer wants it. |
 | Deployed trial instance | **Operated by the team (delegated use).** The trial runs on a university VM at `http://10.93.26.175:8080/` (university network/VPN only). The team deploys releases to it and keeps it running until grading is complete. It is a trial/evaluation environment, not a production commitment. |
-| Customer-side deployment | **Not yet in place.** The product is fully self-hostable with Docker (see below); no customer-side environment existed as of the Week 6 trial. Standing up a customer-side instance — or explicitly agreeing that the customer will run it later from the repository — is the main remaining Week 7 transition action. |
+| Customer-side deployment | **Not yet in place — by the customer's own plan.** The product is fully self-hostable with Docker (see below). At the Week 6 review (10 Jul 2026) the customer stated they will not run the university-VM instance: their large-company environment has a security and deployment bar the trial setup does not target, and their internal deployment structure is confidential. After the final delivery, the customer's own staff (a group of interns) will evaluate the project and perform the customer-side deployment. The team's job is therefore to make this document and the repository sufficient for that team to deploy without us. |
 | External services and accounts | **None to hand over.** The product depends only on PostgreSQL, which runs in the customer's own Docker environment; there are no third-party SaaS accounts, API keys, or paid services involved. |
 | Documentation | **Transferred (public).** The maintained documentation set lives in the repository and is published as a browsable site at <https://varriwon4ik.github.io/avito_bonus_point_service/>; it stays available as long as the public repository exists. |
 
@@ -123,6 +123,11 @@ Steps the customer must be able to follow on their own machine or server
 - **The trial VM is university-network-only** and is kept only until grading
   is complete — it is not a long-term hosting commitment; long-term operation
   means self-hosting from the repository.
+- **Horizontal-scaling suitability is not yet explicitly documented.**
+  Requested by the customer at the Week 6 documentation review; the
+  assessment and an explicit statement in the architecture documentation are
+  scheduled as `Must Have` for Sprint 5
+  ([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)).
 
 ## Handover status
 
@@ -130,21 +135,30 @@ Steps the customer must be able to follow on their own machine or server
      confirmation, set the reached level and confirmation status below and
      mirror them in reports/week7/README.md. -->
 
-- **Handover level reached:** trial stage — `v2.1.0` is provided for
-  independent customer trial during Week 6; the final level
+- **Handover level reached:** trial stage — `v2.1.0` was trialled by the
+  customer at the Week 6 session (10 Jul 2026); the customer confirmed the
+  product will be **ready for independent use** after the Week 7 work and
+  **independently used the trial release** during the session; it is **not**
+  deployed or operated on the customer side, by their own plan (their staff
+  deploy after final delivery). The final level
   (`Ready for independent use` / `Independently used by customer` /
   `Deployed or operated on customer side`) is confirmed and recorded here at
   the Week 7 transition.
 - **Customer-confirmation status:** pending the Week 7 confirmation
-  (`Accepted` / `Accepted with follow-up items` / `Not yet accepted`).
-- **Is the documentation sufficient for this stage?** For the current trial
-  stage, yes: a reader with Docker can run, upgrade, reset, and verify the
-  service using only this document and the README, without team involvement —
-  that is exactly what the Week 6 customer documentation review is asked to
-  confirm or refute. Gaps the customer identifies are converted into traceable
-  issues for Sprint 5.
+  (`Accepted` / `Accepted with follow-up items` / `Not yet accepted`). The
+  customer's stated conditions for a complete delivery: the UI display fix
+  ([#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60)
+  — resolved 10 Jul) and the horizontal-scaling assessment
+  ([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)).
+- **Is the documentation sufficient for this stage?** Reviewed by the
+  customer at the Week 6 session: judged **complete overall** ("the READMEs
+  cover what I need"), with one requested addition — an explicit
+  horizontal-scaling statement in the architecture documentation, tracked as
+  [#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)
+  and reflected in the known-limitations list above until resolved.
 - **Support that remains necessary from the team (current stage):** operating
-  the university trial VM, deploying releases to it, and completing the
-  remaining Week 7 transition actions (customer-side arrangement or explicit
-  self-hosting agreement, final release `MVP v3`, and the acceptance
-  confirmation of this document).
+  the university trial VM until grading, deploying releases to it, and
+  completing the remaining Week 7 actions (the #64 scaling write-up, final
+  release `MVP v3`, and the acceptance confirmation of this document). After
+  final delivery the customer takes care of the project on their own — no
+  ongoing team support was requested.
