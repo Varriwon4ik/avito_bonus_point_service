@@ -48,6 +48,7 @@ nav:
       - ADR-003 — Layered monolith and coverage gates: architecture/adr/ADR-003-layered-monolith-with-gated-critical-modules.md
       - ADR-004 — Client-supplied idempotency keys: architecture/adr/ADR-004-client-supplied-idempotency-keys.md
       - ADR-005 — Single binary and compose deployment: architecture/adr/ADR-005-single-binary-web-ui-and-compose-deployment.md
+      - ADR-006 — Horizontal scaling over single Postgres: architecture/adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md
   - Process:
       - Development process: development-process.md
       - Definition of Done: definition-of-done.md

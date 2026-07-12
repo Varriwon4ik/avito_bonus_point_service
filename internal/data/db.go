@@ -35,9 +35,31 @@ func OpenDB(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
+// migrateLockID is an arbitrary application-chosen key for the session-level
+// Postgres advisory lock that serializes concurrent Migrate calls.
+const migrateLockID = 792101
+
 // Migrate applies all *.up.sql migrations in order. It is safe to call on
 // every startup since the migrations only use IF NOT EXISTS / IF EXISTS.
+// A Postgres advisory lock serializes concurrent callers, so several API
+// replicas starting at the same time against a fresh database do not race
+// (concurrent CREATE TABLE IF NOT EXISTS can otherwise fail in Postgres).
 func Migrate(db *sql.DB) error {
+	// The advisory lock is session-scoped, so acquisition and release must
+	// happen on the same pooled connection.
+	conn, err := db.Conn(context.Background())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(context.Background(),
+		`SELECT pg_advisory_lock($1)`, migrateLockID); err != nil {
+		return err
+	}
+	defer conn.ExecContext(context.Background(),
+		`SELECT pg_advisory_unlock($1)`, migrateLockID)
+
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
 		return err

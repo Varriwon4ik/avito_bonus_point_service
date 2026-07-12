@@ -123,10 +123,58 @@ idempotency keys, autotest scenarios) are managed by versioned SQL migrations.
   the balance read path is middleware → handler → one indexed aggregate query
   ([ADR-002](adr/ADR-002-lazy-expiry-and-fifo-by-expiry-consumption.md)) — no
   fan-out, no background-job dependency.
-- **Constrains scalability/availability:** one process and one database
-  instance; per-user mutations serialize on row locks. Neither horizontal API
-  scaling (possible — the state is all in Postgres) nor DB replication is
-  currently configured; this is the main structural risk if traffic grows.
+- **Constrains scalability/availability:** the *deployed* topology is one
+  process and one database instance; per-user mutations serialize on row
+  locks. The API tier itself is horizontally scalable — see
+  [Horizontal scaling](#horizontal-scaling) below for the explicit statement,
+  conditions, and caveats
+  ([ADR-006](adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md)).
+
+### Horizontal scaling
+
+**Statement: horizontal scaling of the API tier is possible, with
+conditions.** The service was analysed for single-instance assumptions at the
+customer's request
+([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64));
+the full analysis and decision are recorded in
+[ADR-006](adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md).
+
+Why it works: the `api` binary keeps **no ledger state in the process**.
+Every correctness mechanism lives in PostgreSQL and is therefore shared by
+all replicas:
+
+- **No double-spend** — mutations serialize on `SELECT ... FOR UPDATE` row
+  locks in the database (ADR-001), which two replicas contend on exactly like
+  two goroutines in one replica.
+- **Idempotency** — keys and cached first responses are database rows,
+  reserved and committed atomically with the mutation (ADR-004); a retry
+  landing on a different replica is replayed correctly.
+- **Point expiry** — lazy, a query predicate (ADR-002); nothing to coordinate.
+- **Hold-timeout sweeper** — runs in *every* replica, and this is harmless by
+  construction: each release re-checks the hold under a row lock and skips
+  holds already resolved by a concurrent actor. Duplicate sweeps cost
+  duplicate scans and log lines, never a double release.
+- **Startup migrations** — replicas apply migrations at boot; a Postgres
+  advisory lock in `data.Migrate` serializes concurrent first-boots so they
+  cannot race on a fresh database.
+
+Conditions for running more than one replica:
+
+1. **A load balancer** in front of the replicas — the shipped docker compose
+   describes the single-replica trial topology only; multi-replica composition
+   (and its load testing) is the operator's responsibility.
+2. **All replicas point at the same PostgreSQL primary** — the database is the
+   single coordination point by design.
+3. **Prometheus scrapes each replica directly**, not through the load
+   balancer: the `/metrics` registry is in-memory and per-process.
+
+Known caveats: scaling the API tier does **not** scale the database —
+PostgreSQL remains the write bottleneck and the single point of failure, and
+throughput for a *single hot user* does not improve with replicas (that
+user's mutations still serialize on their row locks). Replicas buy API-tier
+availability and throughput across many users; database HA (replication,
+failover) is standard Postgres operations underneath and out of the product's
+current scope.
 
 ---
 
@@ -273,7 +321,10 @@ release commit on the VM and rebuilds with compose.
   outage; the private address means graders need VPN access (private access
   instructions go through Moodle); and manual deploys mean the deployed
   version can lag `main` (this bit us in the Sprint 3 review, where the newest
-  increment had to be shown undeployed).
+  increment had to be shown undeployed). This is a property of the trial
+  deployment, not of the product: the API tier can be scaled out to multiple
+  replicas — see [Horizontal scaling](#horizontal-scaling) and
+  [ADR-006](adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md).
 
 ### Operating it for the customer
 
@@ -301,6 +352,7 @@ IDs, statuses, preserved history). This section is the maintained index.
 | [ADR-003](adr/ADR-003-layered-monolith-with-gated-critical-modules.md) | Layered monolith with coverage-gated critical modules | Accepted | [QR-003](../quality-requirements.md#qr-003-critical-module-testability) |
 | [ADR-004](adr/ADR-004-client-supplied-idempotency-keys.md) | Client-supplied idempotency keys with cached first responses | Accepted | [QR-002](../quality-requirements.md#qr-002-ledger-integrity-under-concurrency) |
 | [ADR-005](adr/ADR-005-single-binary-web-ui-and-compose-deployment.md) | One binary serves API + web UI + autotester; compose deployment | Accepted | [QR-003](../quality-requirements.md#qr-003-critical-module-testability) |
+| [ADR-006](adr/ADR-006-horizontal-scaling-stateless-api-over-single-postgres.md) | Stateless API tier is horizontally scalable; PostgreSQL stays the single coordination point | Accepted | [QR-001](../quality-requirements.md#qr-001-balance-read-response-time), [QR-002](../quality-requirements.md#qr-002-ledger-integrity-under-concurrency) |
 
 ### How the decisions and the architecture fit together
 
@@ -315,6 +367,10 @@ predicate instead of a background job, which is what keeps QR-001's p95 budget
 credible. The module boundaries and the web-UI/autotester placement come from
 ADR-003 and ADR-005, which trade runtime isolation for locality, testability
 (QR-003's per-module coverage gate needs exactly these boundaries), and the
-one-VM compose deployment shown in the deployment view. When any of these
+one-VM compose deployment shown in the deployment view. ADR-006 records that
+this structure was deliberately audited for horizontal scaling: because
+ADR-001/002/004 put every correctness mechanism into the database, adding API
+replicas is a deployment change, not a redesign — with PostgreSQL remaining
+the single coordination point and bottleneck. When any of these
 decisions is revisited, the superseding ADR must be added here and the affected
 view(s) updated in the same PR.
