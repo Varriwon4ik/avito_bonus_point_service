@@ -7,13 +7,11 @@ operates, and what the customer must know and be able to do to use, run, and
 verify the ledger without the team. It is updated whenever access details,
 deployment steps, limitations, or transition status change.
 
-> **Where we are now (Week 6, trial stage):** the Week 6 trial /
-> handover-candidate release
-> [`v2.1.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.1.0)
-> is available for the customer to try independently. The team still operates
-> the deployed instance. The final transition, the reached handover level, and
-> the customer-confirmation status are completed and recorded here during
-> Week 7.
+> **Where we are now (Week 7, final delivery):** the final course version,
+> **MVP v3**, is ready for its `v3.0.0` release. The team operates the
+> evaluation instance; the source, documentation, container deployment,
+> configuration guidance, and verification procedures are available for
+> independent customer use.
 
 ## What is transferred, delegated, or retained
 
@@ -139,22 +137,17 @@ Steps the customer must be able to follow on their own machine or server
 
 ## Handover status
 
-<!-- Finalized during Week 7 (Assignment 6 Part 8): after the transition
-     confirmation, set the reached level and confirmation status below and
-     mirror them in reports/week7/README.md. -->
-
-- **Handover level reached:** trial stage — `v2.1.0` was trialled by the
-  customer at the Week 6 session (10 Jul 2026); the customer confirmed the
-  product will be **ready for independent use** after the Week 7 work and
-  **independently used the trial release** during the session; it is **not**
-  deployed or operated on the customer side, by their own plan (their staff
-  deploy after final delivery). The final level
-  (`Ready for independent use` / `Independently used by customer` /
-  `Deployed or operated on customer side`) is confirmed and recorded here at
-  the Week 7 transition.
-- **Customer-confirmation status:** pending the Week 7 confirmation
-  (`Accepted` / `Accepted with follow-up items` / `Not yet accepted`). The
-  customer's stated conditions for a complete delivery: the UI display fix
+- **Handover level reached:** **Ready for independent use.** The Customer also
+  independently used the Week 6 trial release. `Deployed or operated on
+  customer side` is not claimed: the Customer's infrastructure is
+  confidential, and their own interns will evaluate and deploy the project
+  after delivery.
+- **Customer-confirmation status:** **Accepted.** At the 19 July final product
+  demonstration, after the Week 6 conditions had been resolved, the Customer
+  assessed the product as complete and working well. Public sanitized evidence
+  is indexed in [reports/week7](../reports/week7/README.md); the private
+  recording and exact timecodes remain in the Moodle submission. The two
+  completion conditions were the UI display fix
   ([#60](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/60)
   — resolved 10 Jul) and the horizontal-scaling assessment
   ([#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)).
@@ -163,11 +156,11 @@ Steps the customer must be able to follow on their own machine or server
   cover what I need"), with one requested addition — an explicit
   horizontal-scaling statement in the architecture documentation, tracked as
   [#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)
-  and reflected in the known-limitations list above until resolved.
+  and now resolved in the architecture guide and ADR-006. No documentation
+  gap was raised during the final review.
 - **Support that remains necessary from the team (current stage):** operating
   the university trial VM until grading, deploying releases to it, and
-  completing the remaining Week 7 actions (final release `MVP v3` and the
-  acceptance confirmation of this document; the #64 scaling assessment is
-  done — see the known-limitations entry above). After
+  publishing the prepared `v3.0.0` release and keeping the evaluation
+  deployment available through grading. After
   final delivery the customer takes care of the project on their own — no
   ongoing team support was requested.

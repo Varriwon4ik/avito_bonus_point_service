@@ -368,6 +368,19 @@ Summarised public results for the assignment are in
 [reports/week6/README.md](../reports/week6/README.md) and
 [reports/week6/sprint-review-summary.md](../reports/week6/sprint-review-summary.md).
 
+## Final transition confirmation (2026-07-19)
+
+The Customer observed the final product demonstration after the #60 UI fix and
+#64 scaling work and assessed the product as complete and working well. No new
+defect or requested change resulted. This is overall acceptance evidence for
+the final increment.
+
+The supplied condensed transcript does **not** identify UAT-007 and UAT-009 as
+separately executed step-by-step scenarios. Their Week 6 execution history is
+therefore preserved unchanged rather than overwritten with an unsupported
+`Passed` result. The corrected controls were visible in the final product
+demonstration and the automated checks remain part of CI.
+
 ## Customer feedback and resulting backlog decisions (2026-07-03)
 
 The Sprint 3 session was run screen-share style: each implementer demonstrated

@@ -79,8 +79,9 @@ Sanitized example environment values are available in [`.env.example`](./.env.ex
 
 ## Deployment
 
-The current increment — the Week 6 trial / handover-candidate release
-[`v2.1.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.1.0)
+The current increment — final course version **MVP v3** (`v3.0.0` will be
+published from the final `main` commit; see the
+[releases page](https://github.com/Varriwon4ik/avito_bonus_point_service/releases))
 — is deployed on the University VM and is reachable at
 `http://10.93.26.175:8080/` — serving the web UI, Swagger UI at `/docs`, and the
 API. The address is on the university private network, so access requires the
@@ -112,6 +113,9 @@ through Moodle. Self-hosting steps and the current handover state:
 
 ## Submissions
 
+- **Week 7 (Assignment 6, Sprint 5 / MVP v3):** final public report and
+  Assignment 6 index at [reports/week7/README.md](./reports/week7/README.md).
+  Final handover state: [docs/customer-handover.md](./docs/customer-handover.md).
 - **Week 6 (Assignment 6, Sprint 4 / trial release):** public report index at
   [reports/week6/README.md](./reports/week6/README.md). Week 6 trial /
   handover-candidate release:

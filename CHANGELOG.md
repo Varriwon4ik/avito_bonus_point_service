@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Release administration still required: publish the prepared `v3.0.0` GitHub
+release from the protected default-branch submission commit after the Week 7
+report is merged.
+
+## [3.0.0] - 2026-07-19
+
+MVP v3 — the final Assignment 6 / Sprint 5 course increment. It responds to
+the Week 6 customer trial and documentation review, completes the maintained
+handover evidence, and records the final transition outcome.
+
 ### Added
 
 - **Explicit horizontal-scaling statement in the architecture docs

@@ -122,7 +122,7 @@ maintained [customer handover documentation](customer-handover.md), the
 contributor and agent guidance (`CONTRIBUTING.md`, `AGENTS.md`), the polished
 repository entry point, and the Week 6 report set.
 
-## Now — Sprint 5 (MVP v3, Assignment 6) — 13–19 Jul 2026
+## Sprint 5 (MVP v3, Assignment 6) — 13–19 Jul 2026 — delivered
 
 [Sprint 5 milestone](https://github.com/Varriwon4ik/avito_bonus_point_service/milestone/5)
 
@@ -132,7 +132,7 @@ deliver the final course version **MVP v3** as a release with higher SemVer
 precedence than the Week 6 trial release, leaving the customer able to use,
 verify, and operate the ledger with the maintained documentation set.
 
-**Committed from the Week 6 customer trial and documentation review
+**Delivered from the Week 6 customer trial and documentation review
 (10 Jul 2026):**
 
 - **[#64](https://github.com/Varriwon4ik/avito_bonus_point_service/issues/64)**
@@ -160,14 +160,14 @@ verify, and operate the ledger with the maintained documentation set.
   [docs/customer-handover.md](customer-handover.md), release MVP v3, record the
   public sanitized demo video, and prepare Demo Day.
 
-## State at course end (planned)
+## State at course end (reached)
 
-By the end of Week 7 the product is transitioned to the customer and released
-as **MVP v3**: all `Must Have` and `Should Have` stories delivered
+By the end of Week 7 the product reached **MVP v3** and the `v3.0.0` release
+candidate: all `Must Have` and `Should Have` stories delivered
 (US-01, US-02, US-05, US-08–US-19 minus removed IDs), the maintained
 documentation set (architecture, process, quality, testing, UAT, handover)
-current, all CI quality gates active, and the final handover level and
-customer-confirmation status stated in
+current, all CI quality gates active, and final status **Ready for independent
+use / Accepted** stated in
 [docs/customer-handover.md](customer-handover.md) and the Week 7 report.
 Post-course version planning is intentionally out of scope.
 
@@ -188,4 +188,4 @@ Post-course version planning is intentionally out of scope.
 | [`v1.1.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v1.1.0) | Sprint 2 increment (US-09, US-14, US-15) | Sprint 2 — released |
 | [`v2.0.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.0.0) | MVP v2 (US-08, US-16, US-17, US-18 + architecture/process docs) | Sprint 3 — released |
 | [`v2.1.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v2.1.0) | Week 6 trial / handover candidate (US-01, US-02, US-19 + fixes #54/#60) | Sprint 4 — released |
-| `v3.0.0` (planned) | MVP v3 — final course version after Week 6 trial feedback and transition | Sprint 5 — planned |
+| `v3.0.0` (release candidate) | MVP v3 — final course version after Week 6 trial feedback and transition | Sprint 5 — delivered; GitHub release pending publication from final `main` commit |
