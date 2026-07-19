@@ -79,8 +79,9 @@ Sanitized example environment values are available in [`.env.example`](./.env.ex
 
 ## Deployment
 
-The current increment — final course version **MVP v3**
-([`v3.0.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v3.0.0))
+The current increment — final course version **MVP v3** (`v3.0.0` will be
+published from the final `main` commit; see the
+[releases page](https://github.com/Varriwon4ik/avito_bonus_point_service/releases))
 — is deployed on the University VM and is reachable at
 `http://10.93.26.175:8080/` — serving the web UI, Swagger UI at `/docs`, and the
 API. The address is on the university private network, so access requires the

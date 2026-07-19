@@ -106,9 +106,9 @@ checking. PR #66 records local verification and passed protected-branch CI.
 
 ## 7. Release, changelog, and public demo
 
-- **Final release mapped to MVP v3:**
-  [`v3.0.0`](https://github.com/Varriwon4ik/avito_bonus_point_service/releases/tag/v3.0.0)
-  — release notes are prepared; publication must use the final protected
+- **Final release mapped to MVP v3:** `v3.0.0` will be published on the
+  [repository releases page](https://github.com/Varriwon4ik/avito_bonus_point_service/releases);
+  release notes are prepared, and publication must use the final protected
   `main` submission commit and link this report, Sprint 5, handover, run
   instructions, and the public demo.
 - **Changelog:** [CHANGELOG.md](../../CHANGELOG.md)
